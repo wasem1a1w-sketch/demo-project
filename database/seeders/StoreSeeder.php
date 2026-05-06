@@ -11,26 +11,32 @@ class StoreSeeder extends Seeder
 {
     public function run(): void
     {
-        $electronics = Category::create([
-            'name' => 'Electronics',
-            'slug' => 'electronics',
-            'description' => 'Latest gadgets and electronics',
-            'order' => 1,
-        ]);
+        $electronics = Category::firstOrCreate(
+            ['slug' => 'electronics'],
+            [
+                'name' => 'Electronics',
+                'description' => 'Latest gadgets and electronics',
+                'order' => 1,
+            ]
+        );
 
-        $clothing = Category::create([
-            'name' => 'Clothing',
-            'slug' => 'clothing',
-            'description' => 'Fashionable clothing and accessories',
-            'order' => 2,
-        ]);
+        $clothing = Category::firstOrCreate(
+            ['slug' => 'clothing'],
+            [
+                'name' => 'Clothing',
+                'description' => 'Fashionable clothing and accessories',
+                'order' => 2,
+            ]
+        );
 
-        $home = Category::create([
-            'name' => 'Home & Garden',
-            'slug' => 'home-garden',
-            'description' => 'Items for your home and garden',
-            'order' => 3,
-        ]);
+        $home = Category::firstOrCreate(
+            ['slug' => 'home-garden'],
+            [
+                'name' => 'Home & Garden',
+                'description' => 'Items for your home and garden',
+                'order' => 3,
+            ]
+        );
 
         $products = [
             [
@@ -131,25 +137,32 @@ class StoreSeeder extends Seeder
         ];
 
         foreach ($products as $productData) {
-            Product::create($productData);
+            Product::firstOrCreate(
+                ['slug' => $productData['slug']],
+                $productData
+            );
         }
 
-        Coupon::create([
-            'code' => 'WELCOME10',
-            'type' => 'percentage',
-            'value' => 10,
-            'min_order_amount' => 50,
-            'is_active' => true,
-        ]);
+        Coupon::firstOrCreate(
+            ['code' => 'WELCOME10'],
+            [
+                'type' => 'percentage',
+                'value' => 10,
+                'min_order_amount' => 50,
+                'is_active' => true,
+            ]
+        );
 
-        Coupon::create([
-            'code' => 'SAVE20',
-            'type' => 'fixed',
-            'value' => 20,
-            'min_order_amount' => 100,
-            'max_discount_amount' => 50,
-            'is_active' => true,
-        ]);
+        Coupon::firstOrCreate(
+            ['code' => 'SAVE20'],
+            [
+                'type' => 'fixed',
+                'value' => 20,
+                'min_order_amount' => 100,
+                'max_discount_amount' => 50,
+                'is_active' => true,
+            ]
+        );
 
         $this->command->info('Store seeded successfully!');
     }
