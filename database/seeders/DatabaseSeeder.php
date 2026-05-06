@@ -19,13 +19,13 @@ class DatabaseSeeder extends Seeder
 
         User::firstOrCreate([
             'name' => 'Admin User',
-            'email' => 'admin@example.com',
+            'email' => 'admin@admin.com',
             'is_admin' => true,
         ]);
 
         User::firstOrCreate([
             'name' => 'Test User',
-            'email' => 'test@example.com',
+            'email' => 'test@test.com',
         ]);
     }
 }
