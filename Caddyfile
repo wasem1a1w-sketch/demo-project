@@ -1,0 +1,19 @@
+{
+    # FrankenPHP configuration
+    frankenphp {
+        num_threads {env.FRANKENPHP_NUM_THREADS:100}
+    }
+}
+
+:{$PORT:8080} {
+    root * /app/public
+
+    # Enable compression
+    encode gzip zstd
+
+    # Handle PHP files with FrankenPHP
+    php_server
+
+    # Try to serve static files, fallback to Laravel
+    file_server
+}

@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+.npmrc
+
+# PHP
+vendor
+
+# Laravel
+.env
+.env.example
+storage/*.log
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+bootstrap/cache/*.php
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+public/build
+public/hot
+
+# Tests
+tests
+phpunit.xml
+phpunit.xml.dist
+*.test
+*.spec
+
+# Misc
+*.md
+LICENSE
+README
