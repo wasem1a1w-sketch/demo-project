@@ -1,7 +1,7 @@
 {
     # FrankenPHP configuration
     frankenphp {
-        num_threads {env.FRANKENPHP_NUM_THREADS:100}
+        num_threads 100
     }
 }
 

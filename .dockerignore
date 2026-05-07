@@ -12,7 +12,6 @@ vendor
 
 # Laravel
 .env
-.env.example
 storage/*.log
 storage/framework/cache/*
 storage/framework/sessions/*
