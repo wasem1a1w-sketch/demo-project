@@ -1,5 +1,4 @@
 #!/bin/sh
-set -e
 
 # Detect Railway and set proper APP_URL
 if [ -n "$RAILWAY_STATIC_URL" ]; then
