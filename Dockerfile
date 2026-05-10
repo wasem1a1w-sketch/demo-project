@@ -61,6 +61,7 @@ RUN cp .env.example .env \
     && php artisan key:generate --force \
     && php artisan migrate --force \
     && php artisan route:cache \
+    && npm run build \
     && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database
 
 # Expose port (FrankenPHP will use PORT env var)
