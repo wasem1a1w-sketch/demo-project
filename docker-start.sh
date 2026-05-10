@@ -60,6 +60,7 @@ fi
 php artisan config:clear || true
 php artisan view:clear || true
 php artisan migrate --force || true
+php artisan db:seed --force || true
 php artisan view:cache || true
 
 exec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"
