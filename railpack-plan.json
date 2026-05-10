@@ -1,7 +1,0 @@
-{
-  "providers": {
-    "node": {
-      "installCmd": "npm install"
-    }
-  }
-}

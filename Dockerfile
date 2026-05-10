@@ -62,13 +62,14 @@ RUN cp .env.example .env \
     && php artisan migrate --force \
     && php artisan route:cache \
     && npm run build \
-    && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database
+    && ls -la public/build/ \
+    && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database /app/public/build
 
 # Expose port (FrankenPHP will use PORT env var)
 EXPOSE 8080
 
 # Create startup script (run as root to allow sed, then switch to www-data)
-RUN printf '#!/bin/sh\n# Detect Railway and set proper APP_URL\nif [ -n "$RAILWAY_STATIC_URL" ]; then\n  url="$RAILWAY_STATIC_URL"\n  url="${url#http://}"\n  url="${url#https://}"\n  url="${url%%/*}"\n  export APP_URL="https://$url"\n  export ASSET_URL="https://$url"\n  sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env\nelif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then\n  url="$RAILWAY_PUBLIC_DOMAIN"\n  url="${url#http://}"\n  url="${url#https://}"\n  url="${url%%/*}"\n  export APP_URL="https://$url"\n  export ASSET_URL="https://$url"\n  sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env\nfi\nphp artisan config:clear || true\nphp artisan view:clear || true\nphp artisan migrate --force || true\nphp artisan view:cache || true\nexec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"\n' > /app/start.sh \
+RUN printf '#!/bin/sh\n# Detect Railway and set proper APP_URL\nif [ -n "$RAILWAY_STATIC_URL" ]; then\n  url="$RAILWAY_STATIC_URL"\n  url="${url#http://}"\n  url="${url#https://}"\n  url="${url%%/*}"\n  export APP_URL="https://$url"\n  export ASSET_URL="https://$url"\n  sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env\nelif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then\n  url="$RAILWAY_PUBLIC_DOMAIN"\n  url="${url#http://}"\n  url="${url#https://}"\n  url="${url%%/*}"\n  export APP_URL="https://$url"\n  export ASSET_URL="https://$url"\n  sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env\nfi\necho "Checking for Vite manifest..."\nif [ ! -f /app/public/build/manifest.json ]; then\n  echo "Manifest not found, rebuilding assets..."\n  npm run build || true\nfi\nphp artisan config:clear || true\nphp artisan view:clear || true\nphp artisan migrate --force || true\nphp artisan view:cache || true\nexec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"\n' > /app/start.sh \
     && chmod +x /app/start.sh \
     && mkdir -p /data/caddy && chown -R www-data:www-data /data
 
