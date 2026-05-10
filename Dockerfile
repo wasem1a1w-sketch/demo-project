@@ -63,7 +63,8 @@ RUN cp .env.example .env \
     && php artisan route:cache \
     && npm run build \
     && ls -la public/build/ \
-    && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database /app/public/build
+    && mkdir -p /app/public/uploads \
+    && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database /app/public
 
 # Expose port (FrankenPHP will use PORT env var)
 EXPOSE 8080
