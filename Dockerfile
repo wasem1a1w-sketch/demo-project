@@ -56,25 +56,20 @@ COPY Caddyfile /etc/caddy/Caddyfile
 RUN cp .env.example .env \
     && sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env \
     && sed -i '/DB_HOST/d;/DB_PORT/d;/DB_DATABASE/d;/DB_USERNAME/d;/DB_PASSWORD/d' .env \
+    && sed -i 's|APP_URL=http://localhost|APP_URL=|' .env \
     && touch database/database.sqlite \
     && php artisan key:generate --force \
     && php artisan migrate --force \
-    && npm run build \
-    && php artisan config:cache \
     && php artisan route:cache \
-    && php artisan view:cache \
     && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database
 
 # Expose port (FrankenPHP will use PORT env var)
 EXPOSE 8080
 
-# Create startup script
-RUN echo '#!/bin/sh\nphp artisan migrate --force || true\nexec /usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile' > /app/start.sh \
+# Create startup script (run as root to allow sed, then switch to www-data)
+RUN printf '#!/bin/sh\n# Detect Railway and set proper APP_URL\nif [ -n "$RAILWAY_STATIC_URL" ]; then\n  url="$RAILWAY_STATIC_URL"\n  url="${url#http://}"\n  url="${url#https://}"\n  url="${url%%/*}"\n  export APP_URL="https://$url"\n  export ASSET_URL="https://$url"\n  sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env\nelif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then\n  url="$RAILWAY_PUBLIC_DOMAIN"\n  url="${url#http://}"\n  url="${url#https://}"\n  url="${url%%/*}"\n  export APP_URL="https://$url"\n  export ASSET_URL="https://$url"\n  sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env\nfi\nphp artisan config:clear || true\nphp artisan view:clear || true\nphp artisan migrate --force || true\nphp artisan view:cache || true\nexec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"\n' > /app/start.sh \
     && chmod +x /app/start.sh \
     && mkdir -p /data/caddy && chown -R www-data:www-data /data
-
-# Use www-data user for FrankenPHP
-USER www-data
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/ || exit 1
