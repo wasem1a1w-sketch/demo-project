@@ -48,31 +48,48 @@
                     <textarea v-model="form.description" rows="4" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
                 </div>
                 <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Images</label>
-                    <div v-if="product.images?.length" class="flex gap-2 flex-wrap">
-                        <div v-for="(img, idx) in product.images" :key="img.id"
-                             :class="product.primary_image_id === img.id ? 'ring-2 ring-indigo-600 rounded-lg' : ''"
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Main Image</label>
+                    <div v-if="currentMainImage" class="mb-4">
+                        <div class="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-indigo-500">
+                            <img :src="`/${currentMainImage.image_path}`" class="w-full h-full object-contain">
+                            <button type="button" @click="deleteImage(currentMainImage.id)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 text-xs">&times;</button>
+                            <div class="absolute bottom-0 left-0 right-0 bg-indigo-600 text-white text-xs py-1 text-center font-medium">Main Image</div>
+                        </div>
+                    </div>
+                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-4">No main image uploaded.</p>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Replace Main Image</label>
+                    <input type="file" accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" @change="handleMainImage"
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100">
+                    <p class="mt-1 text-xs text-gray-500">Max 3MB. Leave empty to keep current main image.</p>
+                    <p v-if="mainImageError" class="mt-1 text-xs text-red-500">{{ mainImageError }}</p>
+                    <div v-if="newMainImagePreview" class="mt-4">
+                        <div class="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-indigo-500">
+                            <img :src="newMainImagePreview" class="w-full h-full object-contain">
+                            <button type="button" @click="removeNewMainImage" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 text-xs">&times;</button>
+                            <div class="absolute bottom-0 left-0 right-0 bg-indigo-600 text-white text-xs py-1 text-center font-medium">New Main Image</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Gallery Images</label>
+                    <div v-if="currentGalleryImages.length" class="flex gap-2 flex-wrap mb-4">
+                        <div v-for="img in currentGalleryImages" :key="img.id"
                              class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                             <img :src="`/${img.image_path}`" class="w-full h-full object-contain">
                             <button type="button" @click="deleteImage(img.id)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 text-xs leading-none">&times;</button>
-                            <div class="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-0.5 text-center">
-                                {{ product.primary_image_id === img.id ? 'Primary' : '' }}
-                            </div>
                         </div>
                     </div>
-                    <p v-else class="text-sm text-gray-500 dark:text-gray-400">No images uploaded yet.</p>
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add New Images</label>
-                    <input type="file" multiple accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" @change="handleImageSelect"
+                    <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-4">No gallery images.</p>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Add Gallery Images</label>
+                    <input type="file" multiple accept="image/jpeg,image/png,image/jpg,image/gif,image/webp" @change="handleGalleryImages"
                         class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100">
-                    <p class="mt-1 text-xs text-gray-500">Max 10 images, 2MB each (jpeg, png, jpg, gif, webp)</p>
-
-                    <div v-if="newImagePreviews.length" class="mt-4 flex gap-2 flex-wrap">
-                        <div v-for="(img, idx) in newImagePreviews" :key="'new-'+idx"
+                    <p class="mt-1 text-xs text-gray-500">Up to 4 gallery images total (including existing), 3MB each.</p>
+                    <p v-if="galleryError" class="mt-1 text-xs text-red-500">{{ galleryError }}</p>
+                    <div v-if="newGalleryPreviews.length" class="mt-4 flex gap-2 flex-wrap">
+                        <div v-for="(img, idx) in newGalleryPreviews" :key="'new-'+idx"
                              class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                             <img :src="img" class="w-full h-full object-contain">
-                            <button type="button" @click="removeNewImage(idx)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 text-xs leading-none">&times;</button>
+                            <button type="button" @click="removeNewGalleryImage(idx)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 text-xs leading-none">&times;</button>
                         </div>
                     </div>
                 </div>
@@ -88,8 +105,8 @@
                 </div>
             </div>
             <div class="mt-6 flex gap-4">
-                <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
-                    Update Product
+                <button type="submit" :disabled="submitting" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                    {{ submitting ? 'Updating...' : 'Update Product' }}
                 </button>
                 <Link :href="route('admin.products')" class="text-gray-700 dark:text-gray-300 px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
                     Cancel
@@ -100,34 +117,71 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useNotification } from '../../../composables/useNotification';
-import axios from 'axios';
 
 const { success } = useNotification();
 
 const props = defineProps({ product: Object, categories: Array });
 
 const form = reactive({ ...props.product });
-const newImages = ref([]);
-const newImagePreviews = ref([]);
 const submitting = ref(false);
 
-function handleImageSelect(e) {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
-        newImages.value.push(file);
-        const reader = new FileReader();
-        reader.onload = (e) => newImagePreviews.value.push(e.target.result);
-        reader.readAsDataURL(file);
-    });
+const currentMainImage = computed(() => props.product.images?.find(i => i.is_primary) || null);
+const currentGalleryImages = computed(() => props.product.images?.filter(i => !i.is_primary) || []);
+
+const newMainImage = ref(null);
+const newMainImagePreview = ref('');
+const mainImageError = ref('');
+const newGalleryImages = ref([]);
+const newGalleryPreviews = ref([]);
+const galleryError = ref('');
+
+function handleMainImage(e) {
+    const file = e.target.files[0];
+    mainImageError.value = '';
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+        mainImageError.value = `"${file.name}" exceeds the 3MB limit.`;
+        e.target.value = '';
+        return;
+    }
+    newMainImage.value = file;
+    const reader = new FileReader();
+    reader.onload = (e) => newMainImagePreview.value = e.target.result;
+    reader.readAsDataURL(file);
     e.target.value = '';
 }
 
-function removeNewImage(idx) {
-    newImages.value.splice(idx, 1);
-    newImagePreviews.value.splice(idx, 1);
+function removeNewMainImage() {
+    newMainImage.value = null;
+    newMainImagePreview.value = '';
+}
+
+function handleGalleryImages(e) {
+    const files = Array.from(e.target.files);
+    galleryError.value = '';
+    for (const file of files) {
+        if (file.size > 3 * 1024 * 1024) {
+            galleryError.value = `"${file.name}" exceeds the 3MB limit.`;
+            continue;
+        }
+        if (newGalleryImages.value.length >= 4) {
+            galleryError.value = 'Maximum 4 gallery images allowed.';
+            break;
+        }
+        newGalleryImages.value.push(file);
+        const reader = new FileReader();
+        reader.onload = (e) => newGalleryPreviews.value.push(e.target.result);
+        reader.readAsDataURL(file);
+    }
+    e.target.value = '';
+}
+
+function removeNewGalleryImage(idx) {
+    newGalleryImages.value.splice(idx, 1);
+    newGalleryPreviews.value.splice(idx, 1);
 }
 
 function deleteImage(imageId) {
@@ -151,11 +205,13 @@ function submit() {
         }
     });
 
-    if (newImages.value.length > 0) {
-        newImages.value.forEach((img, idx) => {
-            data.append('new_images[]', img);
-        });
+    if (newMainImage.value) {
+        data.append('main_image', newMainImage.value);
     }
+
+    newGalleryImages.value.forEach(img => {
+        data.append('gallery_images[]', img);
+    });
 
     router.post(route('admin.products.update', { id: props.product.id }), data, {
         forceFormData: true,

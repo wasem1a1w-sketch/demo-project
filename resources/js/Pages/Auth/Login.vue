@@ -52,8 +52,8 @@ const { error } = useNotification();
 
 const processing = ref(false);
 const form = reactive({
-    email: '',
-    password: '',
+    email: 'admin@admin.com',
+    password: 'password',
 });
 
 const hasError = computed(() => props.errors.email || props.errors.password);

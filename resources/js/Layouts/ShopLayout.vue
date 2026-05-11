@@ -5,12 +5,16 @@
         <header class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 transition-colors">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex justify-between items-center h-20">
-                    <!-- Logo -->
-                    <Link :href="route('home')" class="flex items-center">
-                        <span class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
-                            Shop
-                        </span>
-                    </Link>
+                    <div class="flex items-center">
+                        <button @click="mobileMenuOpen = true" class="md:hidden p-1.5 mr-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
+                        <Link :href="route('home')" class="flex items-center">
+                            <span class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+                                Shop
+                            </span>
+                        </Link>
+                    </div>
 
                     <!-- Desktop Nav -->
                     <nav class="hidden md:flex items-center space-x-8">
@@ -20,13 +24,13 @@
                         <Link :href="route('shop')" class="nav-link" :class="isActive('/shop') ? 'nav-link-active' : ''">
                             Shop
                         </Link>
-                        <Link :href="route('categories')" class="nav-link" :class="isActive('/categories') ? 'nav-link-active' : ''">
+                        <!-- <Link :href="route('categories')" class="nav-link" :class="isActive('/categories') ? 'nav-link-active' : ''">
                             Categories
-                        </Link>
+                        </Link> -->
                     </nav>
 
                     <!-- Right Side -->
-                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2 sm:space-x-4">
                         <!-- Theme Toggle -->
                         <ThemeToggle />
 
@@ -48,10 +52,10 @@
                         </Link>
 
                         <!-- Auth -->
-                        <div class="hidden sm:flex items-center space-x-4">
+                        <div class="hidden sm:flex items-center space-x-2 sm:space-x-4">
                             <template v-if="user">
                                 <div class="relative" v-click-outside="closeDropdown">
-                                    <button @click="userDropdownOpen = !userDropdownOpen" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium">
+                                    <button @click="userDropdownOpen = !userDropdownOpen" class="flex items-center gap-2 text-gray-700 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm font-medium whitespace-nowrap">
                                         <span>{{ user.name }}</span>
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -67,56 +71,84 @@
                                 </div>
                             </template>
                             <template v-else>
-                                <Link :href="route('login')" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm">
+                                <Link :href="route('login')" class="text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium text-sm whitespace-nowrap">
                                     Sign In
                                 </Link>
-                                <Link :href="route('register')" class="btn-primary">
+                                <Link :href="route('register')" class="btn-primary whitespace-nowrap">
                                     Sign Up
                                 </Link>
                             </template>
                         </div>
-
-                        <!-- Mobile Menu Button -->
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                            </svg>
-                        </button>
                     </div>
                 </div>
             </div>
-
-            <!-- Mobile Menu -->
-            <div v-if="mobileMenuOpen" class="md:hidden border-t border-gray-100 dark:border-gray-700">
-                <div class="px-4 py-4 space-y-3 bg-white dark:bg-gray-800">
-                    <Link :href="route('home')" class="block nav-link" :class="isActive('/') ? 'nav-link-active' : ''" @click="mobileMenuOpen = false">
-                        Home
-                    </Link>
-                    <Link :href="route('shop')" class="block nav-link" :class="isActive('/shop') ? 'nav-link-active' : ''" @click="mobileMenuOpen = false">
-                        Shop
-                    </Link>
-                    <Link :href="route('categories')" class="block nav-link" :class="isActive('/categories') ? 'nav-link-active' : ''" @click="mobileMenuOpen = false">
-                        Categories
-                    </Link>
-                     <div class="pt-3 border-t border-gray-100 dark:border-gray-700">
-                         <template v-if="user">
-                             <span class="block text-gray-600 dark:text-gray-300 text-sm mb-2">{{ user.name }}</span>
-                             <Link :href="route('orders.index')" class="block nav-link mb-2" @click="mobileMenuOpen = false">My Orders</Link>
-                             <Link :href="route('addresses.index')" class="block nav-link mb-2" @click="mobileMenuOpen = false">Manage Addresses</Link>
-                             <Link v-if="isAdmin" :href="route('admin.dashboard')" class="block text-indigo-600 dark:text-indigo-400 text-sm mb-2" @click="mobileMenuOpen = false">
-                                 Admin Panel
-                             </Link>
-                             <button @click="logout" class="block text-red-500 text-sm">Logout</button>
-                         </template>
-                         <template v-else>
-                             <Link :href="route('login')" class="block nav-link mb-2" @click="mobileMenuOpen = false">Sign In</Link>
-                             <Link :href="route('register')" class="block btn-primary text-center" @click="mobileMenuOpen = false">Sign Up</Link>
-                         </template>
-                     </div>
-                </div>
-            </div>
         </header>
+
+        <Teleport to="body">
+            <Transition name="sidebar">
+                <div v-if="mobileMenuOpen" class="fixed inset-0 z-[60] md:hidden">
+                    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" @click="mobileMenuOpen = false"></div>
+                    <aside class="fixed top-0 left-0 bottom-0 w-72 bg-white dark:bg-gray-800 shadow-2xl flex flex-col">
+                        <div class="flex items-center justify-between px-5 h-16 border-b border-gray-200 dark:border-gray-700">
+                            <span class="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Menu</span>
+                            <button @click="mobileMenuOpen = false" class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+                            <Link :href="route('home')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="page.url === '/' ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                                <span>Home</span>
+                            </Link>
+                            <Link :href="route('shop')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="isActive('/shop') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                                <span>Shop</span>
+                            </Link>
+                            <!-- <Link :href="route('categories')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="isActive('/categories') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+                                <span>Categories</span>
+                            </Link> -->
+                        </nav>
+                        <div class="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-1">
+                            <template v-if="user">
+                                <div class="flex items-center gap-3 px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span class="font-medium truncate">{{ user.name }}</span>
+                                </div>
+                                <Link :href="route('orders.index')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" @click="mobileMenuOpen = false">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                    <span>My Orders</span>
+                                </Link>
+                                <Link :href="route('addresses.index')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" @click="mobileMenuOpen = false">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                    <span>Addresses</span>
+                                </Link>
+                                <Link v-if="isAdmin" :href="route('admin.dashboard')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" @click="mobileMenuOpen = false">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"></path></svg>
+                                    <span>Admin Panel</span>
+                                </Link>
+                                <div class="border-t border-gray-200 dark:border-gray-700 pt-2">
+                                    <button @click="logout" class="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                                        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                        <span>Logout</span>
+                                    </button>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <Link :href="route('login')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" @click="mobileMenuOpen = false">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                                    <span>Sign In</span>
+                                </Link>
+                                <Link :href="route('register')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" @click="mobileMenuOpen = false">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                                    <span>Sign Up</span>
+                                </Link>
+                            </template>
+                        </div>
+                    </aside>
+                </div>
+            </Transition>
+        </Teleport>
 
         <!-- Main Content -->
         <main>
@@ -137,7 +169,7 @@
                         <h4 class="font-semibold mb-4">Shop</h4>
                         <ul class="space-y-3 text-gray-400 text-sm">
                             <li><Link :href="route('shop')" class="hover:text-white">All Products</Link></li>
-                            <li><Link :href="route('categories')" class="hover:text-white">Categories</Link></li>
+                            <!-- <li><Link :href="route('categories')" class="hover:text-white">Categories</Link></li> -->
                         </ul>
                     </div>
                     <div>
@@ -213,3 +245,22 @@ const vClickOutside = {
     },
 };
 </script>
+
+<style scoped>
+.sidebar-enter-active,
+.sidebar-leave-active {
+    transition: opacity 0.2s ease;
+}
+.sidebar-enter-active aside,
+.sidebar-leave-active aside {
+    transition: transform 0.25s ease;
+}
+.sidebar-enter-from,
+.sidebar-leave-to {
+    opacity: 0;
+}
+.sidebar-enter-from aside,
+.sidebar-leave-to aside {
+    transform: translateX(-100%);
+}
+</style>

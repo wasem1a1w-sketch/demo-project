@@ -1,39 +1,5 @@
 <template>
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <!-- Navigation -->
-        <header class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 transition-colors">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between items-center h-20">
-                    <Link :href="route('home')" class="flex items-center">
-                        <span class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">Shop</span>
-                    </Link>
-                    <nav class="hidden md:flex items-center space-x-8">
-                        <Link :href="route('home')" class="nav-link nav-link-active">Home</Link>
-                        <Link :href="route('shop')" class="nav-link">Shop</Link>
-                        <Link :href="route('categories')" class="nav-link">Categories</Link>
-                    </nav>
-                    <div class="flex items-center space-x-4">
-                        <ThemeToggle />
-                        <Link :href="route('cart')" class="relative text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                            </svg>
-                            <span v-if="cartStore.itemCount > 0" class="absolute -top-2 -right-2 bg-indigo-600 dark:bg-indigo-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">{{ cartStore.itemCount }}</span>
-                        </Link>
-                        <template v-if="user">
-                            <span class="text-gray-600 dark:text-gray-300 text-sm hidden sm:block">{{ user.name }}</span>
-                            <Link v-if="isAdmin" :href="route('admin.dashboard')" class="text-indigo-600 dark:text-indigo-400 text-sm hover:text-indigo-700 dark:hover:text-indigo-300">Admin</Link>
-                            <button @click="logout" class="text-red-500 dark:text-red-400 text-sm hover:text-red-600 dark:hover:text-red-300">Logout</button>
-                        </template>
-                        <template v-else>
-                            <Link :href="route('login')" class="hidden sm:block text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 text-sm">Sign In</Link>
-                            <Link :href="route('register')" class="btn-primary text-sm">Sign Up</Link>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </header>
-
+    <ShopLayout>
         <!-- Hero Section -->
         <section class="bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-700 dark:to-purple-700 text-white py-24">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -131,32 +97,18 @@
                 </div>
             </div>
         </section>
-
-        <!-- Footer -->
-        <footer class="bg-gray-900 dark:bg-gray-950 text-white py-12 transition-colors">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-                <span class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Shop</span>
-                <p class="text-gray-500 dark:text-gray-400 mt-4">&copy; {{ new Date().getFullYear() }} Shop. All rights reserved.</p>
-            </div>
-        </footer>
-    </div>
+    </ShopLayout>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { Link, usePage, router } from '@inertiajs/vue3';
+import { ref, onMounted } from 'vue';
+import { Link } from '@inertiajs/vue3';
 import axios from 'axios';
-import { useCartStore } from '../Stores/cart';
-import ThemeToggle from '../components/ThemeToggle.vue';
+import ShopLayout from '../Layouts/ShopLayout.vue';
 
-const page = usePage();
-const cartStore = useCartStore();
 const products = ref([]);
 const categories = ref([]);
 const loading = ref(true);
-
-const user = computed(() => page.props.auth?.user);
-const isAdmin = computed(() => user.value?.is_admin);
 
 onMounted(async () => {
     try {
@@ -172,8 +124,4 @@ onMounted(async () => {
         loading.value = false;
     }
 });
-
-function logout() {
-    router.post(route('logout'));
-}
 </script>

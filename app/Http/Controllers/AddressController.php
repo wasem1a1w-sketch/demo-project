@@ -11,7 +11,7 @@ class AddressController extends Controller
     {
         $addresses = auth()->user()->addresses()->orderByDesc('is_default')->orderByDesc('id')->get();
 
-        if ($request->wantsJson()) {
+        if (!$request->inertia() && $request->wantsJson()) {
             return response()->json(['addresses' => $addresses]);
         }
 
@@ -43,13 +43,9 @@ class AddressController extends Controller
             auth()->user()->addresses()->where('type', $validated['type'])->update(['is_default' => false]);
         }
 
-        $address = Address::create($validated);
+        Address::create($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json(['address' => $address, 'message' => 'Address saved successfully.']);
-        }
-
-        return back()->with('success', 'Address saved successfully.');
+        return back();
     }
 
     public function update(Request $request, $id)
@@ -77,22 +73,12 @@ class AddressController extends Controller
 
         $address->update($validated);
 
-        if ($request->wantsJson()) {
-            return response()->json(['address' => $address, 'message' => 'Address updated successfully.']);
-        }
-
-        return back()->with('success', 'Address updated successfully.');
+        return back();
     }
 
     public function destroy($id)
     {
-        $address = auth()->user()->addresses()->findOrFail($id);
-        $address->delete();
-
-        if (request()->wantsJson()) {
-            return response()->json(['message' => 'Address deleted successfully.']);
-        }
-
-        return back()->with('success', 'Address deleted successfully.');
+        auth()->user()->addresses()->findOrFail($id)->delete();
+        return back();
     }
 }

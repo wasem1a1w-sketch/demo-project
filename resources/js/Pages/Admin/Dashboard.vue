@@ -54,6 +54,7 @@
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Orders</h2>
         </div>
+        <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-700/50">
                 <tr>
@@ -67,7 +68,7 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 <tr v-for="order in (recentOrders || [])" :key="order.id">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                        <Link :href="route('admin.orders.show', { order: order.id })" class="hover:underline">{{ order.order_number }}</Link>
+                        <Link :href="route('admin.orders.show', { id: order.id })" class="hover:underline">{{ order.order_number }}</Link>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ order.shipping_name }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -81,6 +82,7 @@
                 </tr>
             </tbody>
         </table>
+        </div>
     </div>
 </template>
 

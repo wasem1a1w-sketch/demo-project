@@ -35,7 +35,18 @@ class OrderController extends Controller
             'payment_status' => 'required|in:pending,paid,failed,refunded',
         ]);
 
+        $originalStatus = $order->status;
+
         $order->update($validated);
+
+        if ($validated['status'] === 'cancelled' && $originalStatus !== 'cancelled') {
+            $order->load('items.product');
+            foreach ($order->items as $item) {
+                if ($item->product) {
+                    $item->product->increment('stock', $item->quantity);
+                }
+            }
+        }
 
         return back();
     }

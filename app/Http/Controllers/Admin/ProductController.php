@@ -53,19 +53,22 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:100',
             'weight' => 'nullable|integer',
             'weight_unit' => 'nullable|string|max:20',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'primary_image_index' => 'nullable|integer|min:0',
+            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:3072',
+            'gallery_images' => 'nullable|array|max:4',
+            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:3072',
         ]);
 
         $validated['is_active'] = $validated['is_active'] ?? false;
         $validated['is_featured'] = $validated['is_featured'] ?? false;
 
-        $product = Product::create(collect($validated)->except(['images', 'primary_image_index'])->toArray());
+        $product = Product::create(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
 
-        $images = $request->file('images') ?? [];
-        if (!empty($images)) {
-            $this->handleImageUploads($product, $images, $request->input('primary_image_index', 0));
+        if ($request->hasFile('main_image')) {
+            $this->uploadImage($product, $request->file('main_image'), isPrimary: true);
+        }
+
+        foreach ($request->file('gallery_images', []) as $galleryImage) {
+            $this->uploadImage($product, $galleryImage, isPrimary: false);
         }
 
         return to_route('admin.products');
@@ -81,8 +84,7 @@ class ProductController extends Controller
 
     public function update(Request $request, $id)
     {
-        // dd($request->all());
-        $product = Product::findOrFail($id);
+        $product = Product::with('images')->findOrFail($id);
 
         $request->merge([
             'is_active' => filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN),
@@ -103,26 +105,35 @@ class ProductController extends Controller
             'sku' => 'nullable|string|max:100',
             'weight' => 'nullable|integer',
             'weight_unit' => 'nullable|string|max:20',
-            'images' => 'nullable|array|max:10',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'new_images' => 'nullable|array|max:10',
-            'new_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'primary_image_index' => 'nullable|integer|min:0',
+            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:3072',
+            'gallery_images' => 'nullable|array',
+            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:3072',
         ]);
 
         $validated['is_active'] = $validated['is_active'] ?? false;
         $validated['is_featured'] = $validated['is_featured'] ?? false;
 
-        $product->update(collect($validated)->except(['images', 'new_images', 'primary_image_index'])->toArray());
+        $product->update(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
 
-        $images = $request->file('images') ?? [];
-        if (!empty($images)) {
-            $this->handleImageUploads($product, $images, $request->input('primary_image_index', 0));
+        if ($request->hasFile('main_image')) {
+            $oldPrimary = $product->images->firstWhere('is_primary', true);
+            if ($oldPrimary) {
+                Storage::disk('public')->delete($oldPrimary->image_path);
+                $oldPrimary->delete();
+            }
+            $this->uploadImage($product, $request->file('main_image'), isPrimary: true);
         }
 
-        $newImages = $request->file('new_images') ?? [];
-        if (!empty($newImages)) {
-            $this->handleImageUploads($product, $newImages, $request->input('primary_image_index', 0));
+        $galleryFiles = $request->file('gallery_images', []);
+        if (!empty($galleryFiles)) {
+            $currentGalleryCount = $product->images()->where('is_primary', false)->count();
+            $total = $currentGalleryCount + count($galleryFiles);
+            if ($total > 4) {
+                return back()->withErrors(['gallery_images' => 'Gallery images cannot exceed 4. Please delete existing gallery images first.']);
+            }
+            foreach ($galleryFiles as $galleryImage) {
+                $this->uploadImage($product, $galleryImage, isPrimary: false);
+            }
         }
 
         return to_route('admin.products');
@@ -141,41 +152,33 @@ class ProductController extends Controller
         return back();
     }
 
-    protected function handleImageUploads($product, $images, $primaryIndex = 0): void
+    protected function uploadImage($product, $file, bool $isPrimary = false): void
     {
-        if (!is_array($images)) {
-            $images = [$images];
+        if (!$file instanceof \Illuminate\Http\UploadedFile || !$file->isValid()) {
+            return;
         }
 
-        $existingCount = $product->images()->count();
+        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
+        $uploadPath = public_path('uploads');
 
-        foreach ($images as $index => $image) {
-            if (!$image instanceof \Illuminate\Http\UploadedFile || !$image->isValid()) {
-                continue;
-            }
+        if (!is_dir($uploadPath)) {
+            mkdir($uploadPath, 0755, true);
+        }
 
-            $filename = uniqid() . '.' . $image->getClientOriginalExtension();
-            $uploadPath = public_path('uploads');
+        $file->move($uploadPath, $filename);
+        $path = 'uploads/' . $filename;
 
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0755, true);
-            }
+        $order = $isPrimary ? 0 : $product->images()->where('is_primary', false)->count() + 1;
 
-            $image->move($uploadPath, $filename);
-            $path = 'uploads/' . $filename;
+        $productImage = ProductImage::create([
+            'product_id' => $product->id,
+            'image_path' => $path,
+            'is_primary' => $isPrimary,
+            'order' => $order,
+        ]);
 
-            $productImage = ProductImage::create([
-                'product_id' => $product->id,
-                'image_path' => $path,
-                'is_primary' => (int) $index === (int) $primaryIndex,
-                'order' => $existingCount + $index,
-            ]);
-
-            if ((int) $index === (int) $primaryIndex) {
-                $product->update(['primary_image_id' => $productImage->id]);
-            }
-
-            $existingCount++;
+        if ($isPrimary) {
+            $product->update(['primary_image_id' => $productImage->id]);
         }
     }
 }

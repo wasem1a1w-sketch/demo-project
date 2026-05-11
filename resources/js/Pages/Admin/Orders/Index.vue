@@ -3,6 +3,7 @@
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Orders</h1>
 
         <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+            <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                 <thead class="bg-gray-50 dark:bg-gray-700/50">
                     <tr>
@@ -26,7 +27,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${{ order.total }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{{ order.created_at }}</td>
                         <td class="px-6 py-4 text-right text-sm font-medium">
-                            <Link :href="route('admin.orders.show', { id: order.id })" class="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300">View</Link>
+                            <Link :href="route('admin.orders.show', { id: order.id })" class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">View</Link>
                         </td>
                     </tr>
                     <tr v-if="orders.data.length === 0">
@@ -34,6 +35,7 @@
                     </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </template>

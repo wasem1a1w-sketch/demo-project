@@ -74,12 +74,12 @@
                 </form>
             </div>
 
-            <div v-if="addresses.length === 0 && !showForm" class="text-center py-12">
+            <div v-if="props.addresses.length === 0 && !showForm" class="text-center py-12">
                 <p class="text-gray-500 mb-4">You haven't saved any addresses yet.</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div v-for="addr in addresses" :key="addr.id"
+                <div v-for="addr in props.addresses" :key="addr.id"
                     class="bg-white rounded-lg shadow-sm p-6 relative">
                     <div v-if="addr.is_default" class="absolute top-3 right-3">
                         <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">Default</span>
@@ -113,7 +113,6 @@ const page = usePage();
 const showForm = ref(false);
 const editing = ref(null);
 const saving = ref(false);
-const addresses = ref([...props.addresses]);
 
 const form = reactive({
     type: 'shipping',
@@ -172,24 +171,37 @@ function cancelForm() {
     showForm.value = false;
 }
 
-async function submitForm() {
+function submitForm() {
     saving.value = true;
-    try {
-        if (editing.value) {
-            await router.put(route('addresses.update', { id: editing.value }), form, { preserveState: true });
-        } else {
-            await router.post(route('addresses.store'), form, { preserveState: true });
-        }
-        showForm.value = false;
-        resetForm();
-    } finally {
-        saving.value = false;
+    const data = { ...form };
+    if (editing.value) {
+        router.put(route('addresses.update', { id: editing.value }), data, {
+            preserveScroll: true,
+            onSuccess: () => {
+                showForm.value = false;
+                resetForm();
+                saving.value = false;
+            },
+            onError: () => { saving.value = false; },
+        });
+    } else {
+        router.post(route('addresses.store'), data, {
+            preserveScroll: true,
+            onSuccess: () => {
+                showForm.value = false;
+                resetForm();
+                saving.value = false;
+            },
+            onError: () => { saving.value = false; },
+        });
     }
 }
 
 function deleteAddress(id) {
     if (confirm('Are you sure you want to delete this address?')) {
-        router.delete(route('addresses.destroy', { id }));
+        router.delete(route('addresses.destroy', { id }), {
+            preserveScroll: true,
+        });
     }
 }
 </script>

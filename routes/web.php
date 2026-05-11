@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -55,7 +56,7 @@ Route::middleware('web')->group(function () {
 
     // Admin routes - protected
     Route::middleware(['auth', AdminOnly::class])->group(function () {
-        Route::get('/admin', fn () => Inertia::render('Admin/Dashboard'))->name('admin.dashboard');
+        Route::get('/admin', [AdminController::class, 'index'])->name('admin.dashboard');
         Route::get('/admin/products', [AdminProductController::class, 'index'])->name('admin.products');
         Route::get('/admin/products/create', [AdminProductController::class, 'create'])->name('admin.products.create');
         Route::post('/admin/products', [AdminProductController::class, 'store'])->name('admin.products.store');
@@ -66,7 +67,7 @@ Route::middleware('web')->group(function () {
 
         Route::get('/admin/orders', [AdminOrderController::class, 'index'])->name('admin.orders');
         Route::get('/admin/orders/{id}', [AdminOrderController::class, 'show'])->name('admin.orders.show');
-        Route::post('/admin/orders/{id}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
+        Route::put('/admin/orders/{id}', [AdminOrderController::class, 'update'])->name('admin.orders.update');
 
         Route::get('/admin/categories', [AdminCategoryController::class, 'index'])->name('admin.categories');
         Route::post('/admin/categories', [AdminCategoryController::class, 'store'])->name('admin.categories.store');
