@@ -14,9 +14,17 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
+        $sortField = $request->sort ?? 'id';
+        $sortOrder = $request->order === 'asc' ? 'asc' : 'desc';
+
+        $allowedSorts = ['id', 'name', 'price', 'stock', 'created_at', 'updated_at'];
+        if (!in_array($sortField, $allowedSorts)) {
+            $sortField = 'id';
+        }
+
         $products = Product::with(['category', 'images'])
             ->when($request->search, fn ($q, $v) => $q->where('name', 'like', "%$v%"))
-            ->orderByDesc('id')
+            ->orderBy($sortField, $sortOrder)
             ->paginate(20);
 
         $categories = Category::orderBy('name')->get();

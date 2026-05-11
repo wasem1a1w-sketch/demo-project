@@ -54,17 +54,13 @@ COPY Caddyfile /etc/caddy/Caddyfile
 
 # Run Laravel optimizations and build assets
 RUN cp .env.example .env \
-    && sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/' .env \
-    && sed -i '/DB_HOST/d;/DB_PORT/d;/DB_DATABASE/d;/DB_USERNAME/d;/DB_PASSWORD/d' .env \
     && sed -i 's|APP_URL=http://localhost|APP_URL=|' .env \
-    && touch database/database.sqlite \
     && php artisan key:generate --force \
-    && php artisan migrate --force \
     && php artisan route:cache \
     && npm run build \
     && ls -la public/build/ \
     && mkdir -p /app/public/uploads \
-    && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/database /app/public
+    && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
 # Expose port (FrankenPHP will use PORT env var)
 EXPOSE 8080

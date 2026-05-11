@@ -21,9 +21,9 @@
                 <div class="flex-1">
                     <div class="flex justify-between items-center mb-8">
                         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ selectedCategoryName || 'All Products' }}</h1>
-                        <div class="flex items-center gap-4">
-                            <span class="text-sm text-gray-500 dark:text-gray-400">{{ products.total || products.length }} products</span>
-                            <select v-model="sortBy" @change="loadProducts" class="input max-w-[160px]">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ products.total || products.length }} products</span>
+                            <select v-model="sortBy" @change="loadProducts" class="input !px-2 text-sm max-w-[160px]">
                                 <option value="newest">Newest</option>
                                 <option value="price_low">Price: Low to High</option>
                                 <option value="price_high">Price: High to Low</option>
@@ -123,11 +123,14 @@ async function loadCategories() {
 async function loadProducts() {
     loading.value = true;
     try {
-        const params = new URLSearchParams();
-        if (selectedCategory.value) params.append('category', selectedCategory.value);
-        if (searchQuery.value) params.append('search', searchQuery.value);
-        if (sortBy.value) params.append('sort', sortBy.value);
-        const response = await axios.get(`/api/products?${params.toString()}`);
+        const response = await axios.get('/api/products', {
+            params: {
+                category: selectedCategory.value || undefined,
+                search: searchQuery.value || undefined,
+                sort: sortBy.value,
+                _t: Date.now(),
+            },
+        });
         products.value = response.data;
         if (selectedCategory.value && categories.value.length) {
             const cat = categories.value.find(c => c.id == selectedCategory.value);

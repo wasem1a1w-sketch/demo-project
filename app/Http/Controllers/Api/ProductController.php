@@ -30,8 +30,19 @@ class ProductController extends Controller
             $query->featured();
         }
 
-        $products = $query->orderBy('created_at', 'desc')
-            ->paginate($request->per_page ?? 12);
+        $sort = $request->sort ?? 'newest';
+
+        if ($sort === 'price_low') {
+            $query->orderBy('price', 'asc');
+        } elseif ($sort === 'price_high') {
+            $query->orderBy('price', 'desc');
+        } elseif ($sort === 'name') {
+            $query->orderBy('name', 'asc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        $products = $query->paginate($request->per_page ?? 12);
 
         return response()->json($products);
     }

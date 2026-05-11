@@ -5,7 +5,7 @@
 
             <div v-if="orders.data.length === 0" class="text-center py-12">
                 <p class="text-gray-500 mb-4">You haven't placed any orders yet.</p>
-                <Link :href="route('shop')" class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700">
+                <Link :href="route('shop')" class="btn-primary inline-block">
                     Start Shopping
                 </Link>
             </div>
@@ -23,7 +23,7 @@
                     <div class="flex items-center gap-4">
                         <span class="px-2 py-1 rounded-full text-xs font-medium capitalize" :class="statusClass(order.status)">{{ order.status }}</span>
                         <Link :href="route('orders.show', { orderNumber: order.order_number })"
-                            class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
+                            class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
                             View
                         </Link>
                     </div>
