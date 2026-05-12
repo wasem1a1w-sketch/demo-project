@@ -53,9 +53,15 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 - **Checkout** — saved addresses, shipping info, payment method selection
 - **Order Management** — place orders, view order history, admin status updates
 - **Stock Tracking** — automatic stock decrement on order, restore on cancellation
-- **Admin Dashboard** — manage products, orders, users, categories
+- **Role-Based Access Control** — Spatie Laravel Permission with granular permissions per module (create, read, update, delete)
+- **Admin Dashboard** — manage products, orders, users, categories, roles
+- **User Management** — list, create, edit users with single role assignment; filter by client/non-client
+- **Role & Permission Management** — create/edit roles with grouped permission matrix UI; system roles (admin/client) are locked
 - **Image Gallery** — separate main product image and gallery uploads, 3MB limit per image
 - **Responsive Design** — mobile-friendly layout via Tailwind CSS
+
+> **Default admin account:** `admin@admin.com` / `password` (has full permissions)
+> **Registration assigns** the `client` role (no admin permissions by default)
 
 ---
 

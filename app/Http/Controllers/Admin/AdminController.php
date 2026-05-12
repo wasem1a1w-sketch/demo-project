@@ -11,14 +11,23 @@ class AdminController extends Controller
 {
     public function index()
     {
-        $stats = [
-            'products' => Product::count(),
-            'orders' => Order::count(),
-            'pendingOrders' => Order::where('status', 'pending')->count(),
-            'revenue' => Order::where('payment_status', 'paid')->sum('total'),
-        ];
+        $user = request()->user();
 
-        $recentOrders = Order::orderByDesc('id')->limit(10)->get();
+        $stats = [];
+
+        if ($user->can('products.read')) {
+            $stats['products'] = Product::count();
+        }
+
+        if ($user->can('orders.read')) {
+            $stats['orders'] = Order::count();
+            $stats['pendingOrders'] = Order::where('status', 'pending')->count();
+            $stats['revenue'] = Order::where('payment_status', 'paid')->sum('total');
+        }
+
+        $recentOrders = $user->can('orders.read')
+            ? Order::orderByDesc('id')->limit(10)->get()
+            : [];
 
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,

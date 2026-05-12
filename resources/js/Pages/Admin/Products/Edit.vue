@@ -52,7 +52,7 @@
                     <div v-if="currentMainImage" class="mb-4">
                         <div class="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-indigo-500">
                             <img :src="`/${currentMainImage.image_path}`" class="w-full h-full object-contain">
-                            <button type="button" @click="deleteImage(currentMainImage.id)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 text-xs">&times;</button>
+                            <button v-if="can('products.images.delete')" type="button" @click="deleteImage(currentMainImage.id)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 text-xs">&times;</button>
                             <div class="absolute bottom-0 left-0 right-0 bg-indigo-600 text-white text-xs py-1 text-center font-medium">Main Image</div>
                         </div>
                     </div>
@@ -76,7 +76,7 @@
                         <div v-for="img in currentGalleryImages" :key="img.id"
                              class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                             <img :src="`/${img.image_path}`" class="w-full h-full object-contain">
-                            <button type="button" @click="deleteImage(img.id)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 text-xs leading-none">&times;</button>
+                            <button v-if="can('products.images.delete')" type="button" @click="deleteImage(img.id)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 text-xs leading-none">&times;</button>
                         </div>
                     </div>
                     <p v-else class="text-sm text-gray-500 dark:text-gray-400 mb-4">No gallery images.</p>
@@ -104,7 +104,7 @@
                     </label>
                 </div>
             </div>
-            <div class="mt-6 flex gap-4">
+            <div v-if="can('products.update')" class="mt-6 flex gap-4">
                 <button type="submit" :disabled="submitting" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
                     {{ submitting ? 'Updating...' : 'Update Product' }}
                 </button>
@@ -120,7 +120,9 @@
 import { reactive, ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useNotification } from '../../../composables/useNotification';
+import { usePermission } from '../../../composables/usePermission';
 
+const { can } = usePermission();
 const { success } = useNotification();
 
 const props = defineProps({ product: Object, categories: Array });

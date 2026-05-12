@@ -86,7 +86,7 @@
                     </label>
                 </div>
             </div>
-            <div class="mt-6 flex gap-4">
+            <div v-if="can('products.create')" class="mt-6 flex gap-4">
                 <button type="submit" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700">
                     Save Product
                 </button>
@@ -101,6 +101,9 @@
 <script setup>
 import { reactive, ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
+import { usePermission } from '../../../composables/usePermission';
+
+const { can } = usePermission();
 
 defineProps({ categories: Array });
 

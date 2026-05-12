@@ -4,7 +4,7 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Categories</h1>
         </div>
 
-        <div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg mb-6 p-6">
+        <div v-if="can('categories.create')" class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg mb-6 p-6">
             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Add Category</h3>
             <form @submit.prevent="createCategory" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <input v-model="form.name" type="text" placeholder="Name" required class="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500">
@@ -31,7 +31,7 @@
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ category.slug }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{{ category.products_count }}</td>
                         <td class="px-6 py-4 text-right text-sm font-medium">
-                            <button @click="deleteCategory(category.id)" class="inline-flex items-center px-3 py-1 bg-red-600 dark:bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-red-100 hover:bg-red-500 dark:hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">Delete</button>
+                            <button v-if="can('categories.delete')" @click="deleteCategory(category.id)" class="inline-flex items-center px-3 py-1 bg-red-600 dark:bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-red-100 hover:bg-red-500 dark:hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">Delete</button>
                         </td>
                     </tr>
                     <tr v-if="categories.length === 0">
@@ -47,6 +47,9 @@
 <script setup>
 import { reactive } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
+import { usePermission } from '../../../composables/usePermission';
+
+const { can } = usePermission();
 
 defineProps({ categories: Array });
 

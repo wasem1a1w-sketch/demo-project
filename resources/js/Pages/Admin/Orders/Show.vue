@@ -19,7 +19,7 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div class="lg:col-span-2">
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <div v-if="can('orders.update')" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                     <div class="flex items-center gap-2 mb-5">
                         <div class="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
                             <svg class="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -228,7 +228,9 @@
 import { reactive, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useNotification } from '../../../composables/useNotification';
+import { usePermission } from '../../../composables/usePermission';
 
+const { can } = usePermission();
 const props = defineProps({ order: Object });
 
 const { success } = useNotification();

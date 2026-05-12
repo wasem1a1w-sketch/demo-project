@@ -21,7 +21,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             $user = Auth::user();
-            $redirect = $user->is_admin ? route('admin.dashboard') : route('home');
+            $redirect = $user->can('admin.access') ? route('admin.dashboard') : route('home');
 
             return Inertia::location($redirect);
         }
@@ -45,6 +45,8 @@ class AuthController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);
+
+        $user->assignRole('client');
 
         Auth::login($user);
 

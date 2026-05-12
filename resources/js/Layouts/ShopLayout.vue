@@ -65,7 +65,7 @@
                                         <Link :href="route('orders.index')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">My Orders</Link>
                                         <Link :href="route('addresses.index')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Manage Addresses</Link>
                                         <div class="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-                                        <Link v-if="isAdmin" :href="route('admin.dashboard')" class="block px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700">Admin Panel</Link>
+                                        <Link v-if="can('admin.access')" :href="route('admin.dashboard')" class="block px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-700">Admin Panel</Link>
                                         <button @click="logout" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700">Logout</button>
                                     </div>
                                 </div>
@@ -123,7 +123,7 @@
                                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                                     <span>Addresses</span>
                                 </Link>
-                                <Link v-if="isAdmin" :href="route('admin.dashboard')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" @click="mobileMenuOpen = false">
+                                <Link v-if="can('admin.access')" :href="route('admin.dashboard')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors" @click="mobileMenuOpen = false">
                                     <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7"></path></svg>
                                     <span>Admin Panel</span>
                                 </Link>
@@ -199,8 +199,11 @@
 import { ref, onMounted, computed } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useCartStore } from '../Stores/cart';
+import { usePermission } from '../composables/usePermission';
 import Notifications from '../components/Notifications.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
+
+const { can } = usePermission();
 
 const page = usePage();
 const cartStore = useCartStore();
@@ -209,7 +212,6 @@ const mobileMenuOpen = ref(false);
 const userDropdownOpen = ref(false);
 
 const user = computed(() => page.props.auth?.user);
-const isAdmin = computed(() => user.value?.is_admin);
 
 onMounted(async () => {
     await cartStore.fetchCart();

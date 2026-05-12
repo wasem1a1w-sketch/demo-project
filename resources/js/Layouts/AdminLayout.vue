@@ -12,9 +12,10 @@
                         </Link>
                         <nav class="hidden md:flex ml-10 space-x-8">
                             <Link :href="route('admin.dashboard')" class="text-sm font-medium whitespace-nowrap" :class="url === '/admin' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Dashboard</Link>
-                            <Link :href="route('admin.products')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/products') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Products</Link>
-                            <Link :href="route('admin.orders')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/orders') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Orders</Link>
-                            <Link :href="route('admin.categories')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/categories') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Categories</Link>
+                            <Link v-if="can('products.read')" :href="route('admin.products')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/products') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Products</Link>
+                            <Link v-if="can('orders.read')" :href="route('admin.orders')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/orders') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Orders</Link>
+                            <Link v-if="can('categories.read')" :href="route('admin.categories')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/categories') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Categories</Link>
+                            <Link v-if="can('users.read')" :href="route('admin.users')" class="text-sm font-medium whitespace-nowrap" :class="url.startsWith('/admin/users') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'">Users</Link>
                         </nav>
                     </div>
                     <div class="flex items-center space-x-2 sm:space-x-4">
@@ -44,17 +45,21 @@
                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
                                 <span>Dashboard</span>
                             </Link>
-                            <Link :href="route('admin.products')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/products') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                            <Link v-if="can('products.read')" :href="route('admin.products')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/products') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4l-8-4m-8 4l8 4"></path></svg>
                                 <span>Products</span>
                             </Link>
-                            <Link :href="route('admin.orders')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/orders') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                            <Link v-if="can('orders.read')" :href="route('admin.orders')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/orders') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                                 <span>Orders</span>
                             </Link>
-                            <Link :href="route('admin.categories')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/categories') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                            <Link v-if="can('categories.read')" :href="route('admin.categories')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/categories') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
                                 <span>Categories</span>
+                            </Link>
+                            <Link v-if="can('users.read')" :href="route('admin.users')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/users') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                <span>Users</span>
                             </Link>
                         </nav>
                         <div class="border-t border-gray-200 dark:border-gray-700 px-3 py-4 space-y-1">
@@ -82,8 +87,11 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
+import { usePermission } from '../composables/usePermission';
 import ThemeToggle from '../components/ThemeToggle.vue';
 import Notifications from '../components/Notifications.vue';
+
+const { can } = usePermission();
 
 const page = usePage();
 const url = computed(() => page.url || '');

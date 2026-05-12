@@ -2,7 +2,7 @@
     <div class="px-4 py-6 sm:px-0">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Products</h1>
-            <Link :href="route('admin.products.create')" class="btn-primary">
+            <Link v-if="can('products.create')" :href="route('admin.products.create')" class="btn-primary">
                 Add Product
             </Link>
         </div>
@@ -51,8 +51,8 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Link :href="route('admin.products.edit', { id: product.id })" class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-3">Edit</Link>
-                            <button @click="deleteProduct(product.id)" class="inline-flex items-center px-3 py-1 bg-red-600 dark:bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-red-100 hover:bg-red-500 dark:hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">Delete</button>
+                            <Link v-if="can('products.update')" :href="route('admin.products.edit', { id: product.id })" class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-3">Edit</Link>
+                            <button v-if="can('products.delete')" @click="deleteProduct(product.id)" class="inline-flex items-center px-3 py-1 bg-red-600 dark:bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-red-100 hover:bg-red-500 dark:hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">Delete</button>
                         </td>
                     </tr>
                     <tr v-if="products.data.length === 0">
@@ -67,6 +67,9 @@
 
 <script setup>
 import { Link, router } from '@inertiajs/vue3';
+import { usePermission } from '../../../composables/usePermission';
+
+const { can } = usePermission();
 
 defineProps({
     products: Object,
