@@ -19,6 +19,7 @@
                         </nav>
                     </div>
                     <div class="flex items-center space-x-2 sm:space-x-4">
+                        <NotificationBell scope="admin" />
                         <ThemeToggle />
                         <Link :href="route('home')" class="hidden sm:inline-flex text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm">View Store</Link>
                         <form @submit.prevent="logout" class="hidden sm:block">
@@ -88,6 +89,7 @@
 import { ref, computed } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { usePermission } from '../composables/usePermission';
+import NotificationBell from '../components/NotificationBell.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
 import Notifications from '../components/Notifications.vue';
 

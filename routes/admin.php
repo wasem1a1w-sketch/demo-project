@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductImageController as AdminProductImageController;
@@ -68,4 +69,10 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
         ->can('users.update');
     Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy')
         ->can('users.delete');
+
+    // Admin notification routes
+    Route::get('/admin/notifications', [AdminNotificationController::class, 'index']);
+    Route::get('/admin/notifications/unread', [AdminNotificationController::class, 'unread']);
+    Route::patch('/admin/notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
+    Route::patch('/admin/notifications/read-all', [AdminNotificationController::class, 'markAllRead']);
 });

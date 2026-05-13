@@ -24,8 +24,10 @@
         "@tailwindcss/forms": "^0.5.11",
         "@vitejs/plugin-vue": "^6.0.5",
         "autoprefixer": "^10.4.27",
+        "laravel-echo": "^1.18",
         "pinia": "^3.0.4",
         "postcss": "^8.5.9",
+        "pusher-js": "^8.4",
         "vue": "^3.5.32",
         "ziggy-js": "^2.6.2"
     }

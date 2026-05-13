@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\ClientNotificationBroadcast;
 use App\Http\Controllers\Controller;
+use App\Models\AdminNotification;
 use App\Models\Order;
+use App\Notifications\OrderStatusChanged;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -38,6 +41,27 @@ class OrderController extends Controller
         $originalStatus = $order->status;
 
         $order->update($validated);
+
+        if ($originalStatus !== $validated['status']) {
+            AdminNotification::notify('order_status_changed', [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number,
+                'old_status' => $originalStatus,
+                'new_status' => $validated['status'],
+                'message' => "Order #{$order->order_number} is now {$validated['status']}",
+            ]);
+
+            if ($order->user) {
+                $order->user->notify(new OrderStatusChanged($order, $originalStatus, $validated['status']));
+                broadcast(new ClientNotificationBroadcast('order_status_changed', [
+                    'order_number' => $order->order_number,
+                    'order_id' => $order->id,
+                    'old_status' => $originalStatus,
+                    'new_status' => $validated['status'],
+                    'message' => "Order #{$order->order_number} is now {$validated['status']}",
+                ], $order->user->id));
+            }
+        }
 
         if ($validated['status'] === 'cancelled' && $originalStatus !== 'cancelled') {
             $order->load('items.product');

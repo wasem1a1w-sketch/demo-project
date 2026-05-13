@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AdminNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +48,13 @@ class AuthController extends Controller
         ]);
 
         $user->assignRole('client');
+
+        AdminNotification::notify('new_user_registered', [
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'user_email' => $user->email,
+            'message' => "New user registered: {$user->name}",
+        ]);
 
         Auth::login($user);
 

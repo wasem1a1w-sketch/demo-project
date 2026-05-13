@@ -4,6 +4,7 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\OrderController as ApiOrderController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController as ShopOrderController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,12 @@ Route::middleware('web')->group(function () {
         Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
         Route::put('/addresses/{id}', [AddressController::class, 'update'])->name('addresses.update');
         Route::delete('/addresses/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+
+        // Notification routes
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
     });
 
     // API Cart routes (session-based)

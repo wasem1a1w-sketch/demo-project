@@ -65,6 +65,52 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 
 ---
 
+---
+
+## Real-Time Notifications
+
+Notifications use Laravel Reverb (WebSocket) + Echo for push delivery, with two separate scopes:
+
+| Scope | Broadcast Event | Channel | DB Table | Visible In |
+|-------|----------------|---------|----------|------------|
+| **Client** | `ClientNotificationBroadcast` | `App.Models.User.{id}` | `notifications` (Laravel's) | Shop/orders area |
+| **Admin** | `AdminNotificationBroadcast` | `admin.notifications` (requires `admin.access`) | `admin_notifications` + pivot `admin_notification_user` | Admin panel |
+
+- Both events use `ShouldBroadcastNow` (synchronous, no queue worker needed)
+- `AdminNotification::notify()` creates a single row + broadcasts — all admins see it
+- Pivot row in `admin_notification_user` is created **only when an admin reads** (unread = no row)
+- Client notifications persist via `$user->notify()` (Laravel's `notifications` table)
+
+### Broadcasting Config
+
+```env
+BROADCAST_CONNECTION=reverb
+QUEUE_CONNECTION=sync
+VITE_REVERB_HOST=127.0.0.1
+VITE_REVERB_PORT=8081
+VITE_REVERB_SCHEME=http
+```
+
+### Start Reverb
+
+```bash
+php artisan reverb:start --host=127.0.0.1 --port=8081
+```
+
+### Testing (ephemeral — no DB save, gone on refresh)
+
+```bash
+# Test client notification (appears in shop bell)
+php artisan notify:test 2
+
+# Test admin notification (appears in admin bell)
+php artisan notify:test 2 --admin
+```
+
+Replace `2` with the target user's ID.
+
+---
+
 ## Architecture
 
 This project uses the **Laravel + Inertia + Vue** stack:

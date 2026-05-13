@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\ClientNotificationBroadcast;
 use App\Http\Controllers\Controller;
 use App\Models\Address;
+use App\Models\AdminNotification;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Notifications\OrderStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
@@ -48,7 +51,8 @@ class OrderController extends Controller
         }
 
         $user = $request->user();
-        $order = DB::transaction(function () use ($validated, $sessionId, $cartItems, $user) {
+        $lowStockProducts = [];
+        $order = DB::transaction(function () use ($validated, $sessionId, $cartItems, $user, &$lowStockProducts) {
             $orderNumber = Order::generateOrderNumber();
 
             $order = Order::create([
@@ -86,6 +90,10 @@ class OrderController extends Controller
                     ]);
 
                     $product->decrement('stock', $item->quantity);
+
+                    if ($product->stock <= 5 && !isset($lowStockProducts[$product->id])) {
+                        $lowStockProducts[$product->id] = $product;
+                    }
                 }
             }
 
@@ -118,6 +126,34 @@ class OrderController extends Controller
                     'is_default' => false,
                 ]
             );
+        }
+
+        AdminNotification::notify('new_order', [
+            'order_id' => $order->id,
+            'order_number' => $order->order_number,
+            'total' => $order->total,
+            'customer_name' => $order->shipping_name,
+            'message' => "New order #{$order->order_number} for \${$order->total}",
+        ]);
+
+        if ($user) {
+            $user->notify(new OrderStatusChanged($order, 'new', 'pending'));
+            broadcast(new ClientNotificationBroadcast('order_status_changed', [
+                'order_number' => $order->order_number,
+                'order_id' => $order->id,
+                'old_status' => 'new',
+                'new_status' => 'pending',
+                'message' => "Order #{$order->order_number} is now pending",
+            ], $user->id));
+        }
+
+        foreach ($lowStockProducts as $lowStockProduct) {
+            AdminNotification::notify('low_stock', [
+                'product_id' => $lowStockProduct->id,
+                'product_name' => $lowStockProduct->name,
+                'stock' => $lowStockProduct->stock,
+                'message' => "Low stock: {$lowStockProduct->name} ({$lowStockProduct->stock} left)",
+            ]);
         }
 
         return response()->json([

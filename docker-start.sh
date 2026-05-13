@@ -63,4 +63,6 @@ php artisan migrate --force || true
 php artisan db:seed --force || true
 php artisan view:cache || true
 
+chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
+
 exec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"

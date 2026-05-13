@@ -41,6 +41,11 @@
                             </svg>
                         </Link>
 
+                        <!-- Notifications -->
+                        <template v-if="user">
+                            <NotificationBell />
+                        </template>
+
                         <!-- Cart -->
                         <Link :href="route('cart')" class="relative text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,6 +206,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useCartStore } from '../Stores/cart';
 import { usePermission } from '../composables/usePermission';
 import Notifications from '../components/Notifications.vue';
+import NotificationBell from '../components/NotificationBell.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
 
 const { can } = usePermission();
