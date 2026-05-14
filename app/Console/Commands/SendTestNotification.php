@@ -6,14 +6,14 @@ use App\Events\AdminNotificationBroadcast;
 use App\Events\ClientNotificationBroadcast;
 use App\Models\AdminNotification;
 use App\Models\User;
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('notify:test {user} {--admin : Send as admin notification}')]
-#[Description('Broadcast a test notification to a user (ephemeral — no DB save, gone on refresh)')]
 class SendTestNotification extends Command
 {
+    protected $signature = 'notify:test {user} {--admin : Send as admin notification}';
+
+    protected $description = 'Broadcast a test notification to a user (ephemeral — no DB save, gone on refresh)';
+
     public function handle()
     {
         $user = User::findOrFail($this->argument('user'));

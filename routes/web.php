@@ -10,8 +10,13 @@ use App\Http\Controllers\OrderController as ShopOrderController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\VerificationController;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::middleware('web')->match(['get', 'post'], '/broadcasting/auth', [
+    \Illuminate\Broadcasting\BroadcastController::class, 'authenticate'
+])->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class);
 
 Route::middleware('web')->group(function () {
     // Shop routes
