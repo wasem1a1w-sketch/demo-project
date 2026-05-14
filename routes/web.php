@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\OrderController as ApiOrderController;
+use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController as ShopOrderController;
@@ -29,6 +30,7 @@ Route::middleware('web')->group(function () {
         Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
         Route::put('/addresses/{id}', [AddressController::class, 'update'])->name('addresses.update');
         Route::delete('/addresses/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+        Route::get('/wishlist', [ShopController::class, 'wishlist'])->name('wishlist');
 
         // Notification routes
         Route::get('/notifications', [NotificationController::class, 'index']);
@@ -48,6 +50,14 @@ Route::middleware('web')->group(function () {
         Route::delete('cart/coupon', [CartController::class, 'removeCoupon']);
         Route::post('orders', [ApiOrderController::class, 'store']);
         Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
+    });
+
+    // API Wishlist routes (authenticated)
+    Route::middleware('auth')->prefix('api')->group(function () {
+        Route::get('wishlist', [WishlistController::class, 'index']);
+        Route::post('wishlist/add', [WishlistController::class, 'add']);
+        Route::delete('wishlist/{id}', [WishlistController::class, 'remove']);
+        Route::delete('wishlist', [WishlistController::class, 'clear']);
     });
 
     // Auth routes

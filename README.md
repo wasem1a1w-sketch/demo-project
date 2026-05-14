@@ -49,6 +49,7 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 - **Authentication** — user registration, login, logout, password reset, email verification
 - **Password Reset** — forgot/reset password flow with email notification
 - **Email Verification** — verify email addresses after registration; unverified users see a notice page with resend option
+- **Wishlist** — save/favorite products for later; heart toggle on product cards, detail page, and dedicated wishlist page
 - **Product Management** — create, edit, delete products with image uploads (main image + gallery, max 5)
 - **Category Management** — organize products by category
 - **Shopping Cart** — add/remove items, apply coupons, real-time totals

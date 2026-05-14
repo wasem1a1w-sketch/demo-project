@@ -3,7 +3,7 @@
 ## High Impact
 - [ ] **Payment Integration** — Stripe/PayPal UI selects a method but nothing processes. All orders end up `payment_status = pending`.
 - [ ] **Product Reviews & Ratings** — No way for customers to leave reviews on product pages
-- [ ] **Wishlist** — No save-for-later / favorites for logged-in users
+- [x] **Wishlist** — Save-for-later / favorites for logged-in users
 
 ## Medium Impact
 - [ ] **Live Search / Autocomplete** — Search works but no instant dropdown suggestions
@@ -12,6 +12,8 @@
 - [ ] **Email Notifications** — Mail is on `log` driver; real transactional emails would be valuable
 - [ ] **Product Variants** — No size/color/options per product
 - [ ] **Shipping & Tax Config** — Both hardcoded ($15 flat, 10% tax); admin-configurable would be better
+- [ ] **Rate Limiting** — API endpoints and login/checkout lack throttling; implement Laravel's built-in `RateLimiter` for security
+- [ ] **User Activity Logs** — Track admin actions (product edits, order updates, user changes) with an audit log for accountability
 
 ## Nice to Have
 - [ ] **SEO** — No meta tags, sitemap, or structured data (JSON-LD)
