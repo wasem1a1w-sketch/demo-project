@@ -229,6 +229,7 @@ import { reactive, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useNotification } from '../../../composables/useNotification';
 import { usePermission } from '../../../composables/usePermission';
+import { formatDate } from '../../../helpers/format';
 
 const { can } = usePermission();
 const props = defineProps({ order: Object });
@@ -242,17 +243,6 @@ const form = reactive({
     status: props.order.status,
     payment_status: props.order.payment_status,
 });
-
-function formatDate(date) {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
-}
 
 function statusBadgeClass(status) {
     const classes = {

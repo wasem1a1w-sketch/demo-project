@@ -6,7 +6,9 @@ use App\Http\Controllers\Api\OrderController as ApiOrderController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController as ShopOrderController;
+use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ShopController;
+use App\Http\Controllers\VerificationController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -54,4 +56,19 @@ Route::middleware('web')->group(function () {
     Route::get('/register', fn () => Inertia::render('Auth/Register'))->name('register');
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Password Reset
+    Route::middleware('guest')->group(function () {
+        Route::get('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->name('password.request');
+        Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
+        Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetPasswordForm'])->name('password.reset.form');
+        Route::post('/reset-password', [PasswordResetController::class, 'updatePassword'])->name('password.update');
+    });
+
+    // Email Verification
+    Route::middleware('auth')->group(function () {
+        Route::get('/email/verify', [VerificationController::class, 'showNotice'])->name('verification.notice');
+        Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
+        Route::post('/email/resend', [VerificationController::class, 'resend'])->name('verification.resend');
+    });
 });
