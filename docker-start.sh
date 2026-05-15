@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 # Detect Railway and set proper APP_URL
 if [ -n "$RAILWAY_STATIC_URL" ]; then
   url="$RAILWAY_STATIC_URL"
@@ -49,6 +51,14 @@ if [ -n "$MYSQL_URL" ]; then
     echo "DB_USERNAME=$db_user"
     echo "DB_PASSWORD=$db_pass"
   } >> /app/.env
+fi
+
+# Start Reverb in single-container mode (not when using docker-compose with separate reverb service)
+if [ "$REVERB_SERVER_HOST" = "0.0.0.0" ] || [ "$REVERB_SERVER_HOST" = "127.0.0.1" ] || [ -z "$REVERB_SERVER_HOST" ]; then
+  echo "Starting Reverb WebSocket server..."
+  export REVERB_SERVER_HOST=0.0.0.0
+  php artisan reverb:start --host=0.0.0.0 --port=8081 &
+  echo "Reverb started on port 8081 (PID: $!)"
 fi
 
 echo "Checking for Vite manifest..."

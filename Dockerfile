@@ -1,4 +1,4 @@
-FROM docker.io/dunglas/frankenphp:php8.3.30-bookworm
+FROM docker.io/dunglas/frankenphp:php8.4-bookworm
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y \
         zip \
         exif \
         pcntl \
+        sockets \
         opcache \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -62,8 +63,8 @@ RUN cp .env.example .env \
     && mkdir -p /app/public/uploads \
     && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
-# Expose port (FrankenPHP will use PORT env var)
-EXPOSE 8080
+# Expose ports (FrankenPHP + Reverb)
+EXPOSE 8080 8081
 
 # Copy startup script
 COPY docker-start.sh /app/start.sh
