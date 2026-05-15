@@ -11,6 +11,12 @@
     # Enable compression
     encode gzip zstd
 
+    # Proxy WebSocket connections (Pusher protocol) to Reverb
+    @reverb {
+        path /app/*
+    }
+    reverse_proxy @reverb localhost:8081
+
     # Handle PHP files with FrankenPHP
     php_server
 
