@@ -10,7 +10,14 @@ if [ -n "$RAILWAY_STATIC_URL" ]; then
   url="${url%%/*}"
   export APP_URL="https://$url"
   export ASSET_URL="https://$url"
+  export REVERB_HOST="$url"
+  export REVERB_PORT=443
+  export REVERB_SCHEME=https
+  export VITE_REVERB_HOST="$url"
+  export VITE_REVERB_PORT=443
+  export VITE_REVERB_SCHEME=https
   sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env
+  sed -i "s|REVERB_HOST=.*|REVERB_HOST=$url|; s|REVERB_PORT=.*|REVERB_PORT=443|; s|REVERB_SCHEME=.*|REVERB_SCHEME=https|" /app/.env
 elif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
   url="$RAILWAY_PUBLIC_DOMAIN"
   url="${url#http://}"
@@ -18,7 +25,14 @@ elif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
   url="${url%%/*}"
   export APP_URL="https://$url"
   export ASSET_URL="https://$url"
+  export REVERB_HOST="$url"
+  export REVERB_PORT=443
+  export REVERB_SCHEME=https
+  export VITE_REVERB_HOST="$url"
+  export VITE_REVERB_PORT=443
+  export VITE_REVERB_SCHEME=https
   sed -i "s|APP_URL=.*|APP_URL=https://$url|" /app/.env
+  sed -i "s|REVERB_HOST=.*|REVERB_HOST=$url|; s|REVERB_PORT=.*|REVERB_PORT=443|; s|REVERB_SCHEME=.*|REVERB_SCHEME=https|" /app/.env
 fi
 
 # Detect Railway MySQL database
