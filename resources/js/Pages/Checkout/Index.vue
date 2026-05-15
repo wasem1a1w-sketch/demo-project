@@ -1,7 +1,12 @@
 <template>
     <ShopLayout>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 class="text-3xl font-bold mb-8">Checkout</h1>
+        <div class="flex items-center gap-4 mb-8">
+            <Link :href="route('cart')" class="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </Link>
+            <h1 class="text-3xl font-bold">Checkout</h1>
+        </div>
 
         <div v-if="cartStore.items.length === 0" class="text-center py-12">
             <p class="text-gray-500 mb-4">Your cart is empty</p>

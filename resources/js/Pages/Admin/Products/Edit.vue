@@ -113,6 +113,15 @@
                 </Link>
             </div>
         </form>
+
+        <ConfirmModal
+            :show="showDeleteModal"
+            title="Delete Image"
+            message="Are you sure you want to delete this image?"
+            @confirm="confirmDeleteImage"
+            @cancel="showDeleteModal = false"
+            @update:show="showDeleteModal = $event"
+        />
     </div>
 </template>
 
@@ -121,6 +130,7 @@ import { reactive, ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { useNotification } from '../../../composables/useNotification';
 import { usePermission } from '../../../composables/usePermission';
+import ConfirmModal from '../../../components/ConfirmModal.vue';
 
 const { can } = usePermission();
 const { success } = useNotification();
@@ -129,6 +139,8 @@ const props = defineProps({ product: Object, categories: Array });
 
 const form = reactive({ ...props.product });
 const submitting = ref(false);
+const showDeleteModal = ref(false);
+const deletingImageId = ref(null);
 
 const currentMainImage = computed(() => props.product.images?.find(i => i.is_primary) || null);
 const currentGalleryImages = computed(() => props.product.images?.filter(i => !i.is_primary) || []);
@@ -187,13 +199,17 @@ function removeNewGalleryImage(idx) {
 }
 
 function deleteImage(imageId) {
-    if (confirm('Delete this image?')) {
-        router.delete(route('admin.product-images.destroy', { id: imageId }), {
-            onSuccess: () => {
-                props.product.images = props.product.images.filter(i => i.id !== imageId);
-            },
-        });
-    }
+    deletingImageId.value = imageId;
+    showDeleteModal.value = true;
+}
+
+function confirmDeleteImage() {
+    showDeleteModal.value = false;
+    router.delete(route('admin.product-images.destroy', { id: deletingImageId.value }), {
+        onSuccess: () => {
+            props.product.images = props.product.images.filter(i => i.id !== deletingImageId.value);
+        },
+    });
 }
 
 function submit() {

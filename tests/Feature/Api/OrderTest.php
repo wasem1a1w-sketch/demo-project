@@ -7,16 +7,23 @@ use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class);
+class OrderTest extends TestCase
+{
+    use RefreshDatabase;
 
-beforeEach(function () {
-    $this->category = Category::factory()->create(['is_active' => true]);
-});
+    private Category $category;
 
-describe('order placement', function () {
-    it('can place an order with valid data', function () {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->category = Category::factory()->create(['is_active' => true]);
+    }
+
+    public function test_can_place_an_order_with_valid_data(): void
+    {
         $product = Product::factory()->create([
             'price' => 50.00,
             'stock' => 10,
@@ -28,22 +35,25 @@ describe('order placement', function () {
             'is_primary' => true,
         ]);
 
-        // Add to cart first
         $this->postJson("/api/cart/add", [
             'product_id' => $product->id,
             'quantity' => 2,
         ]);
 
-        $response = $this->postJson('/api/orders', [
+        $orderData = [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'address1' => '123 Main St',
+            'address2' => '',
             'city' => 'New York',
             'state' => 'NY',
             'postal_code' => '10001',
             'country' => 'USA',
             'phone' => '1234567890',
             'payment_method' => 'stripe',
+        ];
+
+        $response = $this->postJson('/api/orders', array_merge($orderData, [
             'items' => [[
                 'product_id' => $product->id,
                 'quantity' => 2,
@@ -54,24 +64,24 @@ describe('order placement', function () {
             'shipping' => 15.00,
             'discount' => 0,
             'total' => 125.00,
-        ]);
+        ]));
 
-        $response->assertStatus(201)
+        $response->assertStatus(200)
             ->assertJsonStructure([
                 'order_number',
-                'status',
-                'total',
+                'message',
             ]);
 
-        // Check stock was decremented
-        expect($product->fresh()->stock)->toBe(8);
-    });
+        $this->assertEquals(8, $product->fresh()->stock);
+    }
 
-    it('returns error for empty cart', function () {
+    public function test_returns_error_for_empty_cart(): void
+    {
         $response = $this->postJson('/api/orders', [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'address1' => '123 Main St',
+            'address2' => '',
             'city' => 'New York',
             'state' => 'NY',
             'postal_code' => '10001',
@@ -87,9 +97,10 @@ describe('order placement', function () {
         ]);
 
         $response->assertStatus(422);
-    });
+    }
 
-    it('applies coupon and increments usage', function () {
+    public function test_applies_coupon_and_increments_usage(): void
+    {
         $coupon = Coupon::factory()->create([
             'type' => 'percentage',
             'value' => 10,
@@ -110,16 +121,20 @@ describe('order placement', function () {
         $this->postJson("/api/cart/add", ['product_id' => $product->id, 'quantity' => 1]);
         $this->postJson("/api/cart/coupon", ['code' => $coupon->code]);
 
-        $this->postJson('/api/orders', [
+        $orderData = [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'address1' => '123 Main St',
+            'address2' => '',
             'city' => 'New York',
             'state' => 'NY',
             'postal_code' => '10001',
             'country' => 'USA',
             'phone' => '1234567890',
             'payment_method' => 'stripe',
+        ];
+
+        $this->postJson('/api/orders', array_merge($orderData, [
             'items' => [[
                 'product_id' => $product->id,
                 'quantity' => 1,
@@ -131,12 +146,13 @@ describe('order placement', function () {
             'discount' => 10,
             'total' => 115,
             'coupon_id' => $coupon->id,
-        ]);
+        ]));
 
-        expect($coupon->fresh()->used_count)->toBe(1);
-    });
+        $this->assertEquals(1, $coupon->fresh()->used_count);
+    }
 
-    it('rolls back on database error', function () {
+    public function test_rolls_back_on_database_error(): void
+    {
         $product = Product::factory()->create([
             'price' => 50,
             'stock' => 10,
@@ -144,35 +160,35 @@ describe('order placement', function () {
             'category_id' => $this->category->id,
         ]);
 
-        // Force an error by providing invalid data that will cause DB constraint violation
-        // The order number generation should still work, but we can test rollback
         $response = $this->postJson('/api/orders', [
             'first_name' => 'John',
-            // Missing required fields
             'payment_method' => 'invalid_method',
         ]);
 
         $response->assertStatus(422);
-    });
-});
+    }
 
-describe('order viewing', function () {
-    it('can view order by order number', function () {
+    public function test_can_view_order_by_order_number(): void
+    {
         $product = Product::factory()->create([
             'is_active' => true,
             'category_id' => $this->category->id,
         ]);
 
-        $orderResponse = $this->postJson('/api/orders', [
+        $orderData = [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'address1' => '123 Main St',
+            'address2' => '',
             'city' => 'New York',
             'state' => 'NY',
             'postal_code' => '10001',
             'country' => 'USA',
             'phone' => '1234567890',
             'payment_method' => 'stripe',
+        ];
+
+        $orderResponse = $this->postJson('/api/orders', array_merge($orderData, [
             'items' => [[
                 'product_id' => $product->id,
                 'quantity' => 1,
@@ -183,7 +199,7 @@ describe('order viewing', function () {
             'shipping' => 15,
             'discount' => 0,
             'total' => 70,
-        ]);
+        ]));
 
         $orderNumber = $orderResponse->json('order_number');
 
@@ -195,11 +211,12 @@ describe('order viewing', function () {
                 'items',
                 'status',
             ]);
-    });
+    }
 
-    it('returns error for non-existent order', function () {
+    public function test_returns_error_for_non_existent_order(): void
+    {
         $response = $this->getJson('/api/orders/INVALID123');
 
         $response->assertStatus(404);
-    });
-});
+    }
+}

@@ -53,6 +53,15 @@ class ShopController extends Controller
 
     public function categories()
     {
-        return Inertia::render('Shop/Categories');
+        $categories = Category::active()->orderBy('order')->with('children')->get();
+
+        return Inertia::render('Shop/Categories', [
+            'categories' => $categories,
+        ]);
+    }
+
+    public function wishlist()
+    {
+        return Inertia::render('Shop/Wishlist');
     }
 }

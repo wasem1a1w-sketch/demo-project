@@ -62,14 +62,27 @@
             </table>
             </div>
         </div>
+
+        <ConfirmModal
+            :show="showDeleteModal"
+            title="Delete Product"
+            message="Are you sure you want to delete this product?"
+            @confirm="confirmDelete"
+            @cancel="showDeleteModal = false"
+            @update:show="showDeleteModal = $event"
+        />
     </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { usePermission } from '../../../composables/usePermission';
+import ConfirmModal from '../../../components/ConfirmModal.vue';
 
 const { can } = usePermission();
+const showDeleteModal = ref(false);
+const deletingProductId = ref(null);
 
 defineProps({
     products: Object,
@@ -77,12 +90,16 @@ defineProps({
 });
 
 function deleteProduct(id) {
-    if (confirm('Delete this product?')) {
-        router.delete(route('admin.products.destroy', { id }), {
-            onSuccess: () => {
-                router.reload({ only: ['products'] });
-            },
-        });
-    }
+    deletingProductId.value = id;
+    showDeleteModal.value = true;
+}
+
+function confirmDelete() {
+    showDeleteModal.value = false;
+    router.delete(route('admin.products.destroy', { id: deletingProductId.value }), {
+        onSuccess: () => {
+            router.reload({ only: ['products'] });
+        },
+    });
 }
 </script>

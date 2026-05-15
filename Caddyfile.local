@@ -1,0 +1,5 @@
+demo-project {
+    bind 127.0.0.1
+    tls internal
+    reverse_proxy localhost:8000
+}

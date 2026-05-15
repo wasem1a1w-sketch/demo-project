@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\NotificationController as AdminNotificationContro
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductImageController as AdminProductImageController;
+use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Middleware\AdminOnly;
@@ -69,6 +70,16 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
         ->can('users.update');
     Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy')
         ->can('users.delete');
+
+    // Admin review routes
+    Route::get('/admin/reviews', [AdminReviewController::class, 'index'])->name('admin.reviews')
+        ->can('reviews.read');
+    Route::patch('/admin/reviews/{review}/approve', [AdminReviewController::class, 'approve'])->name('admin.reviews.approve')
+        ->can('reviews.update');
+    Route::patch('/admin/reviews/{review}/reject', [AdminReviewController::class, 'reject'])->name('admin.reviews.reject')
+        ->can('reviews.update');
+    Route::delete('/admin/reviews/{review}', [AdminReviewController::class, 'destroy'])->name('admin.reviews.destroy')
+        ->can('reviews.delete');
 
     // Admin notification routes
     Route::get('/admin/notifications', [AdminNotificationController::class, 'index']);

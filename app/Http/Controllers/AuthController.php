@@ -58,7 +58,9 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return Inertia::location(route('home'));
+        $user->sendEmailVerificationNotification();
+
+        return Inertia::location(route('verification.notice'));
     }
 
     public function logout(Request $request)

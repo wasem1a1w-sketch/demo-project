@@ -6,14 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
+        $sub = DB::table('product_reviews')
+            ->selectRaw('COALESCE(AVG(rating), 0)')
+            ->whereColumn('product_id', 'products.id')
+            ->where('is_approved', 1);
+
         $query = Product::with(['images', 'category'])
             ->active()
-            ->withCount('images');
+            ->withCount('images')
+            ->addSelect(['reviews_avg_rating' => $sub])
+            ->withCount(['reviews' => fn ($q) => $q->where('is_approved', true)]);
 
         if ($request->category) {
             $query->where('category_id', $request->category);
@@ -49,9 +57,16 @@ class ProductController extends Controller
 
     public function show($slug)
     {
+        $sub = DB::table('product_reviews')
+            ->selectRaw('COALESCE(AVG(rating), 0)')
+            ->whereColumn('product_id', 'products.id')
+            ->where('is_approved', 1);
+
         $product = Product::with(['images', 'category'])
             ->where('slug', $slug)
             ->active()
+            ->addSelect(['reviews_avg_rating' => $sub])
+            ->withCount(['reviews' => fn ($q) => $q->where('is_approved', true)])
             ->firstOrFail();
 
         return response()->json($product);

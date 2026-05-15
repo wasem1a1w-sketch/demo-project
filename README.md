@@ -1,6 +1,8 @@
 # Laravel E-Commerce
 
-A full-stack e-commerce application built with Laravel, Inertia, and Vue. Features product management, shopping cart, checkout flow, order tracking, and an admin dashboard.
+![CI](https://github.com/wasem1a1w-sketch/demo-project/actions/workflows/ci.yml/badge.svg?branch=development)
+
+A full-stack e-commerce application built with Laravel, Inertia, and Vue. Features product management, shopping cart, checkout flow, order tracking, product reviews & ratings, real-time notifications, and an admin dashboard.
 
 ## Live Demo
 
@@ -46,7 +48,11 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 
 ## Features
 
-- **Authentication** — user registration, login, logout
+- **Product Reviews & Ratings** — customers leave reviews with star ratings; admin approval workflow; edit/delete own reviews; average rating displayed on product cards, detail page, and wishlist; admin notification on new review
+- **Authentication** — user registration, login, logout, password reset, email verification
+- **Password Reset** — forgot/reset password flow with email notification
+- **Email Verification** — verify email addresses after registration; unverified users see a notice page with resend option
+- **Wishlist** — save/favorite products for later; heart toggle on product cards, detail page, and dedicated wishlist page
 - **Product Management** — create, edit, delete products with image uploads (main image + gallery, max 5)
 - **Category Management** — organize products by category
 - **Shopping Cart** — add/remove items, apply coupons, real-time totals
@@ -171,6 +177,32 @@ The app will be available at `http://localhost:8000`. Default admin credentials:
 
 - **Email:** `admin@admin.com`
 - **Password:** `password`
+
+---
+
+## Testing
+
+### Backend (PHPUnit)
+
+```bash
+# Run all feature tests
+php vendor/bin/phpunit tests/Feature/
+
+# Run only review tests
+php vendor/bin/phpunit tests/Feature/Api/ProductReviewTest.php tests/Feature/Admin/ReviewTest.php
+```
+
+### Frontend (Vitest)
+
+```bash
+# Run all frontend tests
+npx vitest run tests/frontend/
+
+# Watch mode
+npx vitest tests/frontend/
+```
+
+> Tests run automatically on every push via [GitHub Actions](.github/workflows/ci.yml) (PHP 8.4 + Node 22, SQLite in-memory).
 
 ---
 

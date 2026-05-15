@@ -19,6 +19,11 @@
                         <input v-model="form.password" type="password" required
                             class="mt-1 block w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
                             :class="{ 'border-red-500 focus:ring-red-500 focus:outline-none': hasError }">
+                        <div class="text-right mt-1">
+                            <Link :href="route('password.request')" class="text-sm text-indigo-600 hover:text-indigo-700">
+                                Forgot your password?
+                            </Link>
+                        </div>
                     </div>
                 </div>
                 <button type="submit" :disabled="processing"
@@ -36,7 +41,7 @@
 </template>
 
 <script setup>
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import { useNotification } from '../../composables/useNotification';
 import Notifications from '../../components/Notifications.vue';
 import { ref, reactive, computed, watch, onMounted } from 'vue';
@@ -48,7 +53,8 @@ const props = defineProps({
     },
 });
 
-const { error } = useNotification();
+const { error, success } = useNotification();
+const page = usePage();
 
 const processing = ref(false);
 const form = reactive({
@@ -63,6 +69,12 @@ onMounted(() => {
     previousErrors = JSON.stringify(props.errors);
     if (props.errors.email || props.errors.password) {
         error(props.errors.email || props.errors.password);
+    }
+    if (page.props.flash?.success) {
+        success(page.props.flash.success);
+    }
+    if (page.props.flash?.error) {
+        error(page.props.flash.error);
     }
 });
 

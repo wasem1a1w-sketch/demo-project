@@ -61,10 +61,22 @@
                         </div>
                     </div>
                     
-                    <button v-if="product.stock > 0" @click="addToCart" :disabled="adding"
-                        class="w-full bg-indigo-600 dark:bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-700 disabled:opacity-50 mb-4">
-                        {{ adding ? 'Adding...' : 'Add to Cart' }}
-                    </button>
+                    <div v-if="product.stock > 0" class="flex gap-3 mb-4">
+                        <button @click="addToCart" :disabled="adding"
+                            class="flex-1 bg-indigo-600 dark:bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 dark:hover:bg-indigo-700 disabled:opacity-50">
+                            {{ adding ? 'Adding...' : 'Add to Cart' }}
+                        </button>
+                        <template v-if="user">
+                            <button @click="wishlistStore.toggleItem(product.id)" class="px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                <svg v-if="wishlistStore.isWishlisted(product.id)" class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                                <svg v-else class="w-5 h-5 text-gray-400 hover:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                            </button>
+                        </template>
+                    </div>
                     
                     <div v-if="message" :class="messageType === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400'" class="p-4 rounded-lg mb-6">
                         {{ message }}
@@ -93,19 +105,31 @@
                     </div>
                 </div>
             </div>
+
+            <ProductReviews
+                v-if="product"
+                :productId="product.id"
+                :avgRating="product.reviews_avg_rating"
+                :reviewsCount="product.reviews_count"
+            />
         </div>
     </ShopLayout>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { usePage, Link } from '@inertiajs/vue3';
 import { useCartStore } from '../../Stores/cart';
+import { useWishlistStore } from '../../Stores/wishlist';
 import ShopLayout from '../../Layouts/ShopLayout.vue';
+import ProductReviews from '../../components/ProductReviews.vue';
 import axios from 'axios';
 
 const page = usePage();
 const cartStore = useCartStore();
+const wishlistStore = useWishlistStore();
+
+const user = computed(() => page.props.auth?.user);
 
 const product = ref(null);
 const loading = ref(true);
@@ -135,6 +159,9 @@ onMounted(async () => {
         product.value = response.data;
         if (product.value.images && product.value.images.length) {
             selectedImage.value = product.value.images[0].image_path;
+        }
+        if (user.value) {
+            await wishlistStore.fetchWishlist();
         }
     } catch (error) {
         console.error('Failed to load product:', error);
