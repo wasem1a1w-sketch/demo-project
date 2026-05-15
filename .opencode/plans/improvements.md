@@ -2,7 +2,7 @@
 
 ## High Impact
 - [ ] **Payment Integration** — Stripe/PayPal UI selects a method but nothing processes. All orders end up `payment_status = pending`.
-- [ ] **Product Reviews & Ratings** — No way for customers to leave reviews on product pages
+- [x] **Product Reviews & Ratings** — Customers can leave reviews (pending admin approval), average rating shown on product cards and detail page, admin panel for approve/reject, admin notifications on submission
 - [x] **Wishlist** — Save-for-later / favorites for logged-in users
 
 ## Medium Impact

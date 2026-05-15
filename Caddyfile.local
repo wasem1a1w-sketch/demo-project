@@ -1,8 +1,5 @@
-{
-    auto_https disable_redirects
-}
-
-myproject:8443 {
+demo-project {
+    bind 127.0.0.1
     tls internal
-    reverse_proxy localhost:80
+    reverse_proxy localhost:8000
 }

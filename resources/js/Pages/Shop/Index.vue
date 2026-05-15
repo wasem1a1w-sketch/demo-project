@@ -65,6 +65,10 @@
                                         <span class="text-xl font-bold text-indigo-600 dark:text-indigo-400">${{ product.price }}</span>
                                         <span v-if="product.compare_price && product.compare_price > product.price" class="text-sm text-gray-400 line-through">${{ product.compare_price }}</span>
                                     </div>
+                                    <div v-if="product.reviews_count" class="flex items-center gap-1 mt-1.5">
+                                        <StarRating :modelValue="Math.round(product.reviews_avg_rating)" :readonly="true" :small="true" />
+                                        <span class="text-xs text-gray-400 ml-0.5">({{ product.reviews_count }})</span>
+                                    </div>
                                     <p v-if="product.stock <= 0" class="text-xs text-red-500 dark:text-red-400 mt-2">Out of Stock</p>
                                     <p v-else-if="product.stock <= 5" class="text-xs text-orange-500 dark:text-orange-400 mt-2">Only {{ product.stock }} left</p>
                                 </div>
@@ -84,6 +88,7 @@ import axios from 'axios';
 import { useCartStore } from '../../Stores/cart';
 import { useWishlistStore } from '../../Stores/wishlist';
 import ShopLayout from '../../Layouts/ShopLayout.vue';
+import StarRating from '../../components/StarRating.vue';
 
 const page = usePage();
 const cartStore = useCartStore();

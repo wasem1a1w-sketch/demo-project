@@ -64,16 +64,20 @@ class WishlistController extends Controller
             ->latest()
             ->get()
             ->map(function ($item) {
+                $product = $item->product;
                 return [
                     'id' => $item->id,
                     'product_id' => $item->product_id,
-                    'product' => $item->product ? [
-                        'id' => $item->product->id,
-                        'name' => $item->product->name,
-                        'slug' => $item->product->slug,
-                        'price' => $item->product->price,
-                        'image' => $item->product->primaryImage?->image_path,
-                        'in_stock' => $item->product->stock > 0,
+                    'product' => $product ? [
+                        'id' => $product->id,
+                        'name' => $product->name,
+                        'slug' => $product->slug,
+                        'price' => $product->price,
+                        'compare_price' => $product->compare_price,
+                        'image' => $product->primaryImage?->image_path,
+                        'in_stock' => $product->stock > 0,
+                        'reviews_avg_rating' => (float) $product->reviews()->where('is_approved', true)->avg('rating'),
+                        'reviews_count' => $product->reviews()->where('is_approved', true)->count(),
                     ] : null,
                 ];
             });

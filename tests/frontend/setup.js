@@ -7,6 +7,11 @@ config.global.stubs = {
     'ThemeToggle': true,
 }
 
+// Mock Ziggy route() global
+config.global.mocks = {
+    route: (name) => `/${name}`,
+}
+
 // Mock axios
 vi.mock('axios', () => {
     return {

@@ -105,6 +105,13 @@
                     </div>
                 </div>
             </div>
+
+            <ProductReviews
+                v-if="product"
+                :productId="product.id"
+                :avgRating="product.reviews_avg_rating"
+                :reviewsCount="product.reviews_count"
+            />
         </div>
     </ShopLayout>
 </template>
@@ -115,6 +122,7 @@ import { usePage, Link } from '@inertiajs/vue3';
 import { useCartStore } from '../../Stores/cart';
 import { useWishlistStore } from '../../Stores/wishlist';
 import ShopLayout from '../../Layouts/ShopLayout.vue';
+import ProductReviews from '../../components/ProductReviews.vue';
 import axios from 'axios';
 
 const page = usePage();

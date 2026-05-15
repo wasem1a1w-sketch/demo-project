@@ -6,15 +6,23 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
-uses(RefreshDatabase::class);
+class ProductTest extends TestCase
+{
+    use RefreshDatabase;
 
-beforeEach(function () {
-    $this->category = Category::factory()->create(['is_active' => true]);
-});
+    private Category $category;
 
-describe('product listing', function () {
-    it('returns paginated products', function () {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->category = Category::factory()->create(['is_active' => true]);
+    }
+
+    public function test_returns_paginated_products(): void
+    {
         Product::factory()->count(15)->create([
             'is_active' => true,
             'category_id' => $this->category->id,
@@ -29,9 +37,10 @@ describe('product listing', function () {
                 'per_page',
                 'current_page',
             ]);
-    });
+    }
 
-    it('only returns active products', function () {
+    public function test_only_returns_active_products(): void
+    {
         Product::factory()->create([
             'is_active' => true,
             'category_id' => $this->category->id,
@@ -43,10 +52,11 @@ describe('product listing', function () {
 
         $response = $this->getJson('/api/products');
 
-        expect($response->json('data'))->toHaveCount(1);
-    });
+        $this->assertCount(1, $response->json('data'));
+    }
 
-    it('filters by category', function () {
+    public function test_filters_by_category(): void
+    {
         $category2 = Category::factory()->create(['is_active' => true]);
         Product::factory()->create([
             'is_active' => true,
@@ -59,11 +69,12 @@ describe('product listing', function () {
 
         $response = $this->getJson("/api/products?category={$this->category->id}");
 
-        expect($response->json('data'))->toHaveCount(1);
-        expect($response->json('data.0.category.id'))->toBe($this->category->id);
-    });
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals($this->category->id, $response->json('data.0.category.id'));
+    }
 
-    it('searches by name and description', function () {
+    public function test_searches_by_name_and_description(): void
+    {
         Product::factory()->create([
             'name' => 'Blue T-Shirt',
             'description' => 'A comfortable shirt',
@@ -79,11 +90,12 @@ describe('product listing', function () {
 
         $response = $this->getJson('/api/products?search=shirt');
 
-        expect($response->json('data'))->toHaveCount(1);
-        expect($response->json('data.0.name'))->toBe('Blue T-Shirt');
-    });
+        $this->assertCount(1, $response->json('data'));
+        $this->assertEquals('Blue T-Shirt', $response->json('data.0.name'));
+    }
 
-    it('filters featured products', function () {
+    public function test_filters_featured_products(): void
+    {
         Product::factory()->create([
             'is_active' => true,
             'is_featured' => true,
@@ -97,11 +109,12 @@ describe('product listing', function () {
 
         $response = $this->getJson('/api/products?featured=1');
 
-        expect($response->json('data'))->toHaveCount(1);
-        expect($response->json('data.0.is_featured'))->toBeTrue();
-    });
+        $this->assertCount(1, $response->json('data'));
+        $this->assertTrue($response->json('data.0.is_featured'));
+    }
 
-    it('sorts by price low to high', function () {
+    public function test_sorts_by_price_low_to_high(): void
+    {
         Product::factory()->create([
             'name' => 'Cheap',
             'price' => 10,
@@ -117,10 +130,11 @@ describe('product listing', function () {
 
         $response = $this->getJson('/api/products?sort=price_low');
 
-        expect($response->json('data.0.name'))->toBe('Cheap');
-    });
+        $this->assertEquals('Cheap', $response->json('data.0.name'));
+    }
 
-    it('sorts by price high to low', function () {
+    public function test_sorts_by_price_high_to_low(): void
+    {
         Product::factory()->create([
             'name' => 'Cheap',
             'price' => 10,
@@ -136,10 +150,11 @@ describe('product listing', function () {
 
         $response = $this->getJson('/api/products?sort=price_high');
 
-        expect($response->json('data.0.name'))->toBe('Expensive');
-    });
+        $this->assertEquals('Expensive', $response->json('data.0.name'));
+    }
 
-    it('includes product images', function () {
+    public function test_includes_product_images(): void
+    {
         $product = Product::factory()->create([
             'is_active' => true,
             'category_id' => $this->category->id,
@@ -151,12 +166,11 @@ describe('product listing', function () {
 
         $response = $this->getJson('/api/products');
 
-        expect($response->json('data.0.images'))->not->toBeEmpty();
-    });
-});
+        $this->assertNotEmpty($response->json('data.0.images'));
+    }
 
-describe('single product', function () {
-    it('returns product details with images and category', function () {
+    public function test_returns_product_details_with_images_and_category(): void
+    {
         $product = Product::factory()->create([
             'is_active' => true,
             'category_id' => $this->category->id,
@@ -174,9 +188,10 @@ describe('single product', function () {
                 'images',
                 'category',
             ]);
-    });
+    }
 
-    it('returns 404 for inactive product', function () {
+    public function test_returns_404_for_inactive_product(): void
+    {
         $product = Product::factory()->create([
             'is_active' => false,
             'category_id' => $this->category->id,
@@ -185,22 +200,22 @@ describe('single product', function () {
         $response = $this->getJson("/api/products/{$product->slug}");
 
         $response->assertStatus(404);
-    });
+    }
 
-    it('returns 404 for non-existent product', function () {
+    public function test_returns_404_for_non_existent_product(): void
+    {
         $response = $this->getJson('/api/products/non-existent-slug');
 
         $response->assertStatus(404);
-    });
-});
+    }
 
-describe('categories endpoint', function () {
-    it('returns active categories', function () {
+    public function test_returns_active_categories(): void
+    {
         Category::factory()->create(['is_active' => true]);
         Category::factory()->create(['is_active' => false]);
 
         $response = $this->getJson('/api/categories');
 
-        expect($response->json())->toHaveCount(2); // Including $this->category
-    });
-});
+        $this->assertCount(2, $response->json()); // Including $this->category
+    }
+}

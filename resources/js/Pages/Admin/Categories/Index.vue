@@ -41,18 +41,30 @@
             </table>
             </div>
         </div>
+
+        <ConfirmModal
+            :show="showDeleteModal"
+            title="Delete Category"
+            message="Are you sure you want to delete this category?"
+            @confirm="confirmDelete"
+            @cancel="showDeleteModal = false"
+            @update:show="showDeleteModal = $event"
+        />
     </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { ref, reactive } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { usePermission } from '../../../composables/usePermission';
+import ConfirmModal from '../../../components/ConfirmModal.vue';
 
 const { can } = usePermission();
 
 defineProps({ categories: Array });
 
+const showDeleteModal = ref(false);
+const deletingCategoryId = ref(null);
 const form = reactive({ name: '', slug: '', description: '' });
 
 function createCategory() {
@@ -64,12 +76,16 @@ function createCategory() {
 }
 
 function deleteCategory(id) {
-    if (confirm('Delete this category?')) {
-        router.delete(route('admin.categories.destroy', { id }), {
-            onSuccess: () => {
-                router.reload({ only: ['categories'] });
-            },
-        });
-    }
+    deletingCategoryId.value = id;
+    showDeleteModal.value = true;
+}
+
+function confirmDelete() {
+    showDeleteModal.value = false;
+    router.delete(route('admin.categories.destroy', { id: deletingCategoryId.value }), {
+        onSuccess: () => {
+            router.reload({ only: ['categories'] });
+        },
+    });
 }
 </script>

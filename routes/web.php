@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\OrderController as ApiOrderController;
+use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
@@ -48,13 +49,23 @@ Route::middleware('web')->group(function () {
     Route::prefix('api')->group(function () {
         Route::get('cart', [CartController::class, 'index']);
         Route::post('cart/add', [CartController::class, 'add']);
-        Route::patch('cart/{id}', [CartController::class, 'update']);
-        Route::delete('cart/{id}', [CartController::class, 'remove']);
         Route::delete('cart/clear', [CartController::class, 'clear']);
         Route::post('cart/coupon', [CartController::class, 'applyCoupon']);
         Route::delete('cart/coupon', [CartController::class, 'removeCoupon']);
+        Route::patch('cart/{id}', [CartController::class, 'update']);
+        Route::delete('cart/{id}', [CartController::class, 'remove']);
         Route::post('orders', [ApiOrderController::class, 'store']);
         Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
+
+        // Public: anyone can view approved reviews
+        Route::get('products/{product}/reviews', [ProductReviewController::class, 'index']);
+    });
+
+    // API Product Reviews (authenticated)
+    Route::middleware('auth')->prefix('api')->group(function () {
+        Route::post('products/{product}/reviews', [ProductReviewController::class, 'store']);
+        Route::put('products/{product}/reviews/{review}', [ProductReviewController::class, 'update']);
+        Route::delete('products/{product}/reviews/{review}', [ProductReviewController::class, 'destroy']);
     });
 
     // API Wishlist routes (authenticated)
