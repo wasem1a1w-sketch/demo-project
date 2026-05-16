@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Middleware\AdminOnly;
 use Illuminate\Support\Facades\Route;
@@ -86,4 +88,19 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
     Route::get('/admin/notifications/unread', [AdminNotificationController::class, 'unread']);
     Route::patch('/admin/notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
     Route::patch('/admin/notifications/read-all', [AdminNotificationController::class, 'markAllRead']);
+
+    // Activity Logs
+    Route::get('/admin/activity-logs', [ActivityLogController::class, 'index'])
+        ->name('admin.activity-logs')
+        ->can('activity-logs.read');
+    Route::get('/admin/activity-logs/data', [ActivityLogController::class, 'getLogs'])
+        ->can('activity-logs.read');
+
+    // Settings
+    Route::get('/admin/settings', [AdminSettingsController::class, 'index'])
+        ->name('admin.settings')
+        ->can('settings.read');
+    Route::put('/admin/settings', [AdminSettingsController::class, 'update'])
+        ->name('admin.settings.update')
+        ->can('settings.update');
 });

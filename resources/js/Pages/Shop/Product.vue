@@ -39,9 +39,9 @@
                     
                     <div class="flex items-center gap-4 mb-6">
                         <span class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">${{ product.price }}</span>
-                        <span v-if="product.compare_price && product.compare_price > product.price" class="text-xl text-gray-400 line-through">${{ product.compare_price }}</span>
-                        <span v-if="product.compare_price && product.compare_price > product.price" class="bg-red-500 text-white text-sm px-2 py-1 rounded">
-                            -{{ Math.round((product.compare_price - product.price) / product.compare_price * 100) }}% OFF
+                        <span v-if="product.compare_price" class="text-xl text-gray-400 line-through">${{ product.compare_price }}</span>
+                        <span v-if="product.compare_price" class="bg-red-500 text-white text-sm px-2 py-1 rounded">
+                            -{{ discountPercent }}% OFF
                         </span>
                     </div>
                     
@@ -128,6 +128,7 @@ import axios from 'axios';
 const page = usePage();
 const cartStore = useCartStore();
 const wishlistStore = useWishlistStore();
+const slug = page.props.slug;
 
 const user = computed(() => page.props.auth?.user);
 
@@ -139,14 +140,12 @@ const adding = ref(false);
 const message = ref('');
 const messageType = ref('');
 
-// Get slug from URL path
-function getSlugFromUrl() {
-    const url = page.props.ziggy?.url || window.location.pathname;
-    const parts = url.split('/');
-    return parts[parts.length - 1] || parts[parts.length - 2];
-}
-
-const slug = getSlugFromUrl();
+const discountPercent = computed(() => {
+    const compare = product.value?.compare_price;
+    const price = product.value?.price;
+    if (!compare || !price || compare <= price) return 0;
+    return Math.round((compare - price) / compare * 100);
+});
 
 onMounted(async () => {
     if (!slug) {

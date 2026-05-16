@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -53,6 +54,8 @@ class UserController extends Controller
             'password' => bcrypt($data['password']),
         ]);
 
+        UserActivityLog::record(auth()->id(), 'user_created', "User created: {$user->email}");
+
         if (!empty($data['role'])) {
             $user->syncRoles([$data['role']]);
         }
@@ -85,6 +88,8 @@ class UserController extends Controller
             'email' => $data['email'],
         ]);
 
+        UserActivityLog::record(auth()->id(), 'user_updated', "User updated: {$user->email}");
+
         if (!empty($data['password'])) {
             $user->update(['password' => bcrypt($data['password'])]);
         }
@@ -96,6 +101,7 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        UserActivityLog::record(auth()->id(), 'user_deleted', "User deleted: {$user->email}");
         $user->delete();
 
         return redirect()->route('admin.users')->with('success', 'User deleted successfully.');

@@ -6,6 +6,11 @@ export const useCartStore = defineStore('cart', () => {
     const items = ref([]);
     const loading = ref(false);
     const coupon = ref(null);
+    const settings = ref({
+        shipping_rate: 15,
+        free_shipping_threshold: 100,
+        tax_rate: 10,
+    });
 
     const itemCount = computed(() => {
         return items.value.reduce((sum, item) => sum + item.quantity, 0);
@@ -30,16 +35,30 @@ export const useCartStore = defineStore('cart', () => {
     });
 
     const tax = computed(() => {
-        return (subtotal.value - discount.value) * 0.1;
+        const rate = Number(settings.value.tax_rate) / 100;
+        return (subtotal.value - discount.value) * rate;
     });
 
     const shipping = computed(() => {
-        return subtotal.value - discount.value >= 100 ? 0 : 15;
+        const threshold = Number(settings.value.free_shipping_threshold);
+        const rate = Number(settings.value.shipping_rate);
+        return subtotal.value - discount.value >= threshold ? 0 : rate;
     });
 
     const total = computed(() => {
         return subtotal.value - discount.value + tax.value + shipping.value;
     });
+
+    async function fetchSettings() {
+        try {
+            const response = await axios.get('/api/settings');
+            if (Object.keys(response.data).length > 0) {
+                settings.value = response.data;
+            }
+        } catch (error) {
+            console.error('Failed to fetch settings:', error);
+        }
+    }
 
     async function fetchCart() {
         loading.value = true;
@@ -59,7 +78,7 @@ export const useCartStore = defineStore('cart', () => {
         try {
             const response = await axios.post('/api/cart/add', {
                 product_id: productId,
-                quantity: quantity
+                quantity: quantity,
             });
             items.value = response.data.items;
             coupon.value = response.data.coupon;
@@ -145,12 +164,14 @@ export const useCartStore = defineStore('cart', () => {
         items,
         loading,
         coupon,
+        settings,
         itemCount,
         subtotal,
         discount,
         tax,
         shipping,
         total,
+        fetchSettings,
         fetchCart,
         addItem,
         updateItem,

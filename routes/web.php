@@ -54,7 +54,7 @@ Route::middleware('web')->group(function () {
         Route::delete('cart/coupon', [CartController::class, 'removeCoupon']);
         Route::patch('cart/{id}', [CartController::class, 'update']);
         Route::delete('cart/{id}', [CartController::class, 'remove']);
-        Route::post('orders', [ApiOrderController::class, 'store']);
+        Route::post('orders', [ApiOrderController::class, 'store'])->middleware('throttle:checkout');
         Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
 
         // Public: anyone can view approved reviews
@@ -78,17 +78,17 @@ Route::middleware('web')->group(function () {
 
     // Auth routes
     Route::get('/login', fn () => Inertia::render('Auth/Login'))->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
     Route::get('/register', fn () => Inertia::render('Auth/Register'))->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     // Password Reset
     Route::middleware('guest')->group(function () {
         Route::get('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->name('password.request');
-        Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
+        Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email')->middleware('throttle:password-reset');
         Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetPasswordForm'])->name('password.reset.form');
-        Route::post('/reset-password', [PasswordResetController::class, 'updatePassword'])->name('password.update');
+        Route::post('/reset-password', [PasswordResetController::class, 'updatePassword'])->name('password.update')->middleware('throttle:password-reset');
     });
 
     // Email Verification

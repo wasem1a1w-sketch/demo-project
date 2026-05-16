@@ -274,11 +274,11 @@ async function placeOrder() {
             country: form.country,
             phone: form.phone,
             payment_method: form.payment_method,
-            items: cartStore.items.map(item => ({
+                items: cartStore.items.map(item => ({
                 id: item.id,
                 product_id: item.product_id,
                 quantity: item.quantity,
-                price: item.product?.price || 0
+                price: item.product?.price || 0,
             })),
             subtotal: Number(cartStore.subtotal),
             tax: Number(cartStore.tax),

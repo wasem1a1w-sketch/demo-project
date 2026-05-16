@@ -10,6 +10,8 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Setting;
+use App\Models\UserActivityLog;
 use App\Notifications\OrderStatusChanged;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +34,8 @@ class OrderController extends Controller
             'phone' => ['required', 'string', 'max:30'],
             'payment_method' => ['required', 'in:stripe,paypal'],
             'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'exists:products,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
             'subtotal' => ['required', 'numeric', 'min:0'],
             'tax' => ['required', 'numeric', 'min:0'],
             'shipping' => ['required', 'numeric', 'min:0'],
@@ -42,28 +46,61 @@ class OrderController extends Controller
 
         $sessionId = Session::get('cart_session');
 
-        $cartItems = collect($validated['items'])->map(function ($item) {
-            return (object) $item;
-        });
+        $items = collect($validated['items']);
 
-        if ($cartItems->isEmpty()) {
+        if ($items->isEmpty()) {
             return response()->json(['message' => 'Cart is empty'], 422);
         }
 
         $user = $request->user();
         $lowStockProducts = [];
-        $order = DB::transaction(function () use ($validated, $sessionId, $cartItems, $user, &$lowStockProducts) {
+
+        $shippingRate = (float) (Setting::get('shipping_rate') ?? 15);
+        $freeShippingThreshold = (float) (Setting::get('free_shipping_threshold') ?? 100);
+        $taxRate = (float) (Setting::get('tax_rate') ?? 10);
+
+        $order = DB::transaction(function () use ($validated, $sessionId, $items, $user, &$lowStockProducts, $shippingRate, $freeShippingThreshold, $taxRate) {
             $orderNumber = Order::generateOrderNumber();
+
+            $recalculatedSubtotal = 0;
+            $orderItems = [];
+
+            foreach ($items as $item) {
+                $product = Product::find($item['product_id']);
+                if (! $product) continue;
+
+                $lineTotal = (float) $product->price * (int) $item['quantity'];
+                $recalculatedSubtotal += $lineTotal;
+
+                $orderItems[] = [
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'product_sku' => $product->sku,
+                    'price' => $product->price,
+                    'quantity' => $item['quantity'],
+                    'subtotal' => $lineTotal,
+                ];
+
+                $product->decrement('stock', $item['quantity']);
+                if ($product->stock <= 5 && !isset($lowStockProducts[$product->id])) {
+                    $lowStockProducts[$product->id] = $product;
+                }
+            }
+
+            $discount = (float) ($validated['discount'] ?? 0);
+            $tax = max(0, ($recalculatedSubtotal - $discount) * $taxRate / 100);
+            $shipping = ($recalculatedSubtotal - $discount) >= $freeShippingThreshold ? 0 : $shippingRate;
+            $total = $recalculatedSubtotal - $discount + $tax + $shipping;
 
             $order = Order::create([
                 'order_number' => $orderNumber,
                 'user_id' => $user?->id,
                 'status' => Order::STATUS_PENDING,
-                'subtotal' => $validated['subtotal'],
-                'tax' => $validated['tax'],
-                'shipping' => $validated['shipping'],
-                'discount' => $validated['discount'],
-                'total' => $validated['total'],
+                'subtotal' => $recalculatedSubtotal,
+                'tax' => $tax,
+                'shipping' => $shipping,
+                'discount' => $discount,
+                'total' => $total,
                 'coupon_id' => $validated['coupon_id'] ?? null,
                 'shipping_name' => "{$validated['first_name']} {$validated['last_name']}",
                 'shipping_address' => $validated['address1'].($validated['address2'] ? ", {$validated['address2']}" : ''),
@@ -76,25 +113,8 @@ class OrderController extends Controller
                 'payment_status' => Order::PAYMENT_PENDING,
             ]);
 
-            foreach ($cartItems as $item) {
-                $product = Product::find($item->product_id);
-                if ($product) {
-                    OrderItem::create([
-                        'order_id' => $order->id,
-                        'product_id' => $product->id,
-                        'product_name' => $product->name,
-                        'product_sku' => $product->sku,
-                        'price' => $item->price ?? $product->price,
-                        'quantity' => $item->quantity,
-                        'subtotal' => ($item->price ?? $product->price) * $item->quantity,
-                    ]);
-
-                    $product->decrement('stock', $item->quantity);
-
-                    if ($product->stock <= 5 && !isset($lowStockProducts[$product->id])) {
-                        $lowStockProducts[$product->id] = $product;
-                    }
-                }
+            foreach ($orderItems as $orderItem) {
+                OrderItem::create(array_merge($orderItem, ['order_id' => $order->id]));
             }
 
             if (!empty($validated['coupon_id'])) {
@@ -146,6 +166,8 @@ class OrderController extends Controller
                 'message' => "Order #{$order->order_number} is now pending",
             ], $user->id));
         }
+
+        UserActivityLog::record($user?->id, 'order_placed', "Order placed: {$order->order_number}");
 
         foreach ($lowStockProducts as $lowStockProduct) {
             AdminNotification::notify('low_stock', [

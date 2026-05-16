@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 
 class ProductReviewController extends Controller
@@ -50,6 +51,8 @@ class ProductReviewController extends Controller
         $review = ProductReview::create($validated);
 
         $review->load('user:id,name');
+
+        UserActivityLog::record($request->user()->id, 'review_created', "Review submitted for product: {$product->name}");
 
         AdminNotification::notify('review_submitted', [
             'review_id' => $review->id,

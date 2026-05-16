@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdminNotification;
 use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -23,6 +24,8 @@ class AuthController extends Controller
             $request->session()->regenerate();
             $user = Auth::user();
             $redirect = $user->can('admin.access') ? route('admin.dashboard') : route('home');
+
+            UserActivityLog::record($user->id, 'user_login', "User logged in: {$user->email}");
 
             return Inertia::location($redirect);
         }
@@ -55,6 +58,8 @@ class AuthController extends Controller
             'user_email' => $user->email,
             'message' => "New user registered: {$user->name}",
         ]);
+
+        UserActivityLog::record($user->id, 'user_registered', "User registered: {$user->email}");
 
         Auth::login($user);
 

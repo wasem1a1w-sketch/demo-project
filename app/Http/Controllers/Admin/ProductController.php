@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -71,6 +72,8 @@ class ProductController extends Controller
 
         $product = Product::create(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
 
+        UserActivityLog::record(auth()->id(), 'product_created', "Product created: {$product->name}");
+
         if ($request->hasFile('main_image')) {
             $this->uploadImage($product, $request->file('main_image'), isPrimary: true);
         }
@@ -123,6 +126,8 @@ class ProductController extends Controller
 
         $product->update(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
 
+        UserActivityLog::record(auth()->id(), 'product_updated', "Product updated: {$product->name}");
+
         if ($request->hasFile('main_image')) {
             $oldPrimary = $product->images->firstWhere('is_primary', true);
             if ($oldPrimary) {
@@ -154,6 +159,8 @@ class ProductController extends Controller
         foreach ($product->images as $image) {
             Storage::disk('public')->delete($image->image_path);
         }
+
+        UserActivityLog::record(auth()->id(), 'product_deleted', "Product deleted: {$product->name}");
 
         $product->delete();
 

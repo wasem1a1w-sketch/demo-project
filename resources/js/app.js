@@ -48,8 +48,9 @@ createInertiaApp({
             .use(pinia)
             .use(ZiggyVue);
 
-        // Fetch cart data on app initialization
+        // Fetch cart data and settings on app initialization
         const cartStore = useCartStore();
+        cartStore.fetchSettings();
         cartStore.fetchCart();
 
         app.mount(el);

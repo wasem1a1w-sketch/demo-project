@@ -79,7 +79,7 @@
                                 <span>-${{ cartStore.discount.toFixed(2) }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600 dark:text-gray-300">Tax (10%)</span>
+                                <span class="text-gray-600 dark:text-gray-300">Tax ({{ cartStore.settings.tax_rate }}%)</span>
                                 <span class="text-gray-900 dark:text-white">${{ cartStore.tax.toFixed(2) }}</span>
                             </div>
                             <div class="flex justify-between">
@@ -117,9 +117,11 @@
 import { ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useCartStore } from '../../Stores/cart';
+import { useNotification } from '../../composables/useNotification';
 import ShopLayout from '../../Layouts/ShopLayout.vue';
 
 const cartStore = useCartStore();
+const { error: showError } = useNotification();
 const couponCode = ref('');
 const applyingCoupon = ref(false);
 const couponError = ref('');
@@ -128,7 +130,11 @@ async function updateQuantity(itemId, quantity) {
     if (quantity < 1) {
         await cartStore.removeItem(itemId);
     } else {
-        await cartStore.updateItem(itemId, quantity);
+        try {
+            await cartStore.updateItem(itemId, quantity);
+        } catch (err) {
+            showError(err.response?.data?.message || 'Failed to update quantity');
+        }
     }
 }
 

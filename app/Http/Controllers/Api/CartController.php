@@ -27,22 +27,23 @@ class CartController extends Controller
             ->get()
             ->map(function ($item) {
                 $product = Product::with('images')->find($item->product_id);
+                if (! $product) return null;
 
                 return [
                     'id' => $item->id,
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
-                    'product' => $product ? [
+                    'product' => [
                         'id' => $product->id,
                         'name' => $product->name,
                         'slug' => $product->slug,
                         'price' => $product->price,
                         'stock' => $product->stock,
                         'images' => $product->images->map(fn ($img) => ['image_path' => $img->image_path])->toArray(),
-                    ] : null,
+                    ],
                 ];
             })
-            ->filter(fn ($item) => $item['product'] !== null)
+            ->filter()
             ->values();
     }
 

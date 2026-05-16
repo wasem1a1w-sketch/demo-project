@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Events\ClientNotificationBroadcast;
 use App\Http\Controllers\Controller;
 use App\Models\ProductReview;
+use App\Models\UserActivityLog;
 use App\Notifications\ReviewApproved;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,6 +32,8 @@ class ReviewController extends Controller
         $review->update(['is_approved' => true]);
         $review->load('product:id,name', 'user:id,name');
 
+        UserActivityLog::record(auth()->id(), 'review_approved', "Review #{$review->id} approved");
+
         $review->user->notify(new ReviewApproved($review, 'approved'));
         broadcast(new ClientNotificationBroadcast('review_status_changed', [
             'message' => 'Your review has been approved!',
@@ -45,6 +48,8 @@ class ReviewController extends Controller
     {
         $review->update(['is_approved' => false]);
         $review->load('product:id,name', 'user:id,name');
+
+        UserActivityLog::record(auth()->id(), 'review_rejected', "Review #{$review->id} rejected");
 
         $review->user->notify(new ReviewApproved($review, 'rejected'));
         broadcast(new ClientNotificationBroadcast('review_status_changed', [
@@ -68,6 +73,8 @@ class ReviewController extends Controller
             'product_name' => $productName,
             'status' => 'deleted',
         ], $userId));
+
+        UserActivityLog::record(auth()->id(), 'review_deleted', "Review #{$review->id} deleted");
 
         $review->delete();
 

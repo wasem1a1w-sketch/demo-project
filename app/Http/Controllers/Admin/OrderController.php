@@ -6,6 +6,7 @@ use App\Events\ClientNotificationBroadcast;
 use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
 use App\Models\Order;
+use App\Models\UserActivityLog;
 use App\Notifications\OrderStatusChanged;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -43,6 +44,7 @@ class OrderController extends Controller
         $order->update($validated);
 
         if ($originalStatus !== $validated['status']) {
+            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} → {$validated['status']}");
             AdminNotification::notify('order_status_changed', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,

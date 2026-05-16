@@ -38,6 +38,8 @@ class RoleAndPermissionSeeder extends Seeder
             'roles.read',
             'roles.update',
             'roles.delete',
+            'settings.read',
+            'settings.update',
         ];
 
         foreach ($permissions as $permission) {
