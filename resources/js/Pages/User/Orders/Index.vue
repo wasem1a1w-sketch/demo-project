@@ -20,8 +20,10 @@
                             {{ order.items.length }} item(s) · ${{ Number(order.total).toFixed(2) }}
                         </p>
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
                         <span class="px-2 py-1 rounded-full text-xs font-medium capitalize" :class="statusClass(order.status)">{{ order.status }}</span>
+                        <span class="px-2 py-1 rounded-full text-xs font-medium capitalize"
+                            :class="paymentStatusClass(order.payment_status)">{{ order.payment_status }}</span>
                         <Link :href="route('orders.show', { orderNumber: order.order_number })"
                             class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
                             View
@@ -60,6 +62,15 @@ const statusClass = (status) => {
         shipped: 'bg-indigo-100 text-indigo-800',
         delivered: 'bg-green-100 text-green-800',
         cancelled: 'bg-red-100 text-red-800',
+    }[status] || 'bg-gray-100 text-gray-800';
+};
+
+const paymentStatusClass = (status) => {
+    return {
+        pending: 'bg-yellow-100 text-yellow-800',
+        paid: 'bg-green-100 text-green-800',
+        failed: 'bg-red-100 text-red-800',
+        refunded: 'bg-purple-100 text-purple-800',
     }[status] || 'bg-gray-100 text-gray-800';
 };
 </script>

@@ -22,11 +22,11 @@ class OrderController extends Controller
 
     public function show($orderNumber)
     {
-        $order = Order::with('items', 'coupon')
+        $order = Order::with('items', 'payments')
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
-        return Inertia::render('Checkout/Success', [
+        return Inertia::render('User/Orders/Show', [
             'order' => $order,
         ]);
     }
