@@ -306,10 +306,6 @@ async function placeOrder() {
             order_id: orderResponse.data.order_id,
         });
 
-        if (!sessionResponse.data.checkout_url) {
-            throw new Error('No checkout URL returned');
-        }
-
         window.location.href = sessionResponse.data.checkout_url;
     } catch (e) {
         console.error('Order error:', e.response?.data || e.message);
