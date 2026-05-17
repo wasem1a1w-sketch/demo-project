@@ -6,6 +6,7 @@ import axios from 'axios';
 import '../css/app.css';
 import { useCartStore } from './Stores/cart';
 import AdminLayout from './Layouts/AdminLayout.vue';
+import VueApexCharts from 'vue3-apexcharts';
 
 const csrfToken = document.head.querySelector('meta[name="csrf-token"]')?.content;
 
@@ -46,7 +47,10 @@ createInertiaApp({
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(pinia)
-            .use(ZiggyVue);
+            .use(ZiggyVue)
+            .use(VueApexCharts);
+
+        app.component('ApexChart', VueApexCharts);
 
         // Fetch cart data and settings on app initialization
         const cartStore = useCartStore();

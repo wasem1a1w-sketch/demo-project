@@ -19,10 +19,41 @@
 
                 <!-- Main Content -->
                 <div class="flex-1">
-                    <div class="flex justify-between items-center mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ selectedCategoryName || 'All Products' }}</h1>
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ products.total || products.length }} products</span>
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-end justify-between mb-8">
+                        <div class="min-w-0">
+                            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">{{ selectedCategoryName || 'All Products' }}</h1>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ products.total || products.length }} products</p>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                            <div ref="searchWrapper" class="relative w-full sm:w-80">
+                                <label class="sr-only" for="product-search">Search products</label>
+                                <div class="flex items-center gap-2 border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 px-3 py-2">
+                                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                    <input
+                                        id="product-search"
+                                        v-model="searchQuery"
+                                        @keydown.enter.prevent="submitSearch"
+                                        @focus="showAutocomplete = true"
+                                        type="search"
+                                        class="w-full bg-transparent text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
+                                        placeholder="Search products..."
+                                    />
+                                </div>
+                                <div v-if="showAutocomplete" class="absolute z-20 mt-2 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden">
+                                    <div v-if="autocompleteLoading" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Searching...</div>
+                                    <template v-else>
+                                        <button v-for="product in autocompleteResults" :key="product.id" @click.prevent="selectSuggestion(product)" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-3">
+                                            <img v-if="product.image" :src="`/${product.image}`" alt="" class="h-10 w-10 rounded-lg object-cover" />
+                                            <div class="min-w-0">
+                                                <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ product.name }}</p>
+                                                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ product.category || 'Product' }}</p>
+                                            </div>
+                                            <span class="text-sm text-indigo-600 dark:text-indigo-400 whitespace-nowrap">${{ product.price }}</span>
+                                        </button>
+                                        <div v-if="!autocompleteLoading && autocompleteResults.length === 0" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">No matching products.</div>
+                                    </template>
+                                </div>
+                            </div>
                             <select v-model="sortBy" @change="loadProducts" class="input !px-2 text-sm max-w-[160px]">
                                 <option value="newest">Newest</option>
                                 <option value="price_low">Price: Low to High</option>
@@ -83,7 +114,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useCartStore } from '../../Stores/cart';
 import { useWishlistStore } from '../../Stores/wishlist';
@@ -97,9 +128,14 @@ const products = ref({ data: [], total: 0 });
 const categories = ref([]);
 const loading = ref(true);
 const searchQuery = ref('');
+const autocompleteResults = ref([]);
+const showAutocomplete = ref(false);
+const autocompleteLoading = ref(false);
 const sortBy = ref('newest');
 const selectedCategory = ref(null);
 const selectedCategoryName = ref('');
+const searchWrapper = ref(null);
+let autocompleteTimeout = null;
 
 const user = computed(() => page.props.auth?.user);
 
@@ -108,6 +144,7 @@ let navigateHandler = null;
 onMounted(async () => {
     const urlParams = new URLSearchParams(window.location.search);
     selectedCategory.value = urlParams.get('category');
+    searchQuery.value = urlParams.get('search') || '';
     await loadCategories();
     await loadProducts();
     if (user.value) {
@@ -125,12 +162,14 @@ onMounted(async () => {
     };
 
     document.addEventListener('inertia:navigate', navigateHandler);
+    document.addEventListener('click', closeAutocomplete);
 });
 
 onUnmounted(() => {
     if (navigateHandler) {
         document.removeEventListener('inertia:navigate', navigateHandler);
     }
+    document.removeEventListener('click', closeAutocomplete);
 });
 
 async function loadCategories() {
@@ -158,10 +197,80 @@ async function loadProducts() {
             const cat = categories.value.find(c => c.id == selectedCategory.value);
             selectedCategoryName.value = cat?.name || '';
         }
+        updateSearchParams();
     } catch (error) {
         console.error('Failed to load products:', error);
     } finally {
         loading.value = false;
     }
 }
+
+async function fetchAutocomplete() {
+    if (!searchQuery.value.trim()) {
+        autocompleteResults.value = [];
+        return;
+    }
+
+    autocompleteLoading.value = true;
+    try {
+        const response = await axios.get('/api/products/autocomplete', {
+            params: { search: searchQuery.value, _t: Date.now() },
+        });
+        autocompleteResults.value = response.data || [];
+    } catch (error) {
+        console.error('Failed to fetch autocomplete results:', error);
+        autocompleteResults.value = [];
+    } finally {
+        autocompleteLoading.value = false;
+    }
+}
+
+function submitSearch() {
+    showAutocomplete.value = false;
+    loadProducts();
+}
+
+function selectSuggestion(product) {
+    showAutocomplete.value = false;
+    router.visit(route('product', product.slug));
+}
+
+function closeAutocomplete(event) {
+    if (searchWrapper.value && !searchWrapper.value.contains(event.target)) {
+        showAutocomplete.value = false;
+    }
+}
+
+function updateSearchParams() {
+    const params = new URLSearchParams();
+    if (selectedCategory.value) {
+        params.set('category', selectedCategory.value);
+    }
+    if (searchQuery.value) {
+        params.set('search', searchQuery.value);
+    }
+
+    const queryString = params.toString();
+    const url = `${window.location.pathname}${queryString ? `?${queryString}` : ''}`;
+    window.history.replaceState(null, '', url);
+}
+
+watch(searchQuery, (value) => {
+    if (autocompleteTimeout) {
+        clearTimeout(autocompleteTimeout);
+    }
+
+    if (!value.trim()) {
+        autocompleteResults.value = [];
+        showAutocomplete.value = false;
+        return;
+    }
+
+    autocompleteTimeout = setTimeout(async () => {
+        if (value.trim()) {
+            await fetchAutocomplete();
+            showAutocomplete.value = true;
+        }
+    }, 250);
+});
 </script>
