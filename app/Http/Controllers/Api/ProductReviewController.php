@@ -82,6 +82,9 @@ class ProductReviewController extends Controller
 
         $validated['is_approved'] = false;
         $review->update($validated);
+
+        UserActivityLog::record($request->user()->id, 'review_updated', "Review #{$review->id} updated for product: {$product->name}");
+
         $review->load('user:id,name');
 
         return response()->json($review);
@@ -92,6 +95,8 @@ class ProductReviewController extends Controller
         if ($review->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
+
+        UserActivityLog::record($request->user()->id, 'review_deleted', "Review #{$review->id} deleted for product: {$product->name}");
 
         $review->delete();
 

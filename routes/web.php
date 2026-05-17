@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\OrderController as ApiOrderController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController as ShopOrderController;
 use App\Http\Controllers\PasswordResetController;
@@ -18,6 +20,10 @@ use Inertia\Inertia;
 Route::match(['get', 'post'], '/broadcasting/auth', [
     \Illuminate\Broadcasting\BroadcastController::class, 'authenticate'
 ])->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class);
+
+// Contact
+Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store']);
 
 // Shop routes
 Route::get('/', [ShopController::class, 'index'])->name('home');
@@ -53,6 +59,8 @@ Route::prefix('api')->group(function () {
     Route::delete('cart/coupon', [CartController::class, 'removeCoupon']);
     Route::patch('cart/{id}', [CartController::class, 'update']);
     Route::delete('cart/{id}', [CartController::class, 'remove']);
+    Route::post('newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+    Route::post('newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
     Route::post('orders', [ApiOrderController::class, 'store'])->middleware('throttle:checkout');
     Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
 

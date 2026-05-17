@@ -85,6 +85,13 @@ class ProductController extends Controller
         return to_route('admin.products');
     }
 
+    public function show($id)
+    {
+        $product = Product::with(['category', 'images'])->findOrFail($id);
+
+        return Inertia::render('Admin/Products/Show', ['product' => $product]);
+    }
+
     public function edit($id)
     {
         $product = Product::with('images')->findOrFail($id);

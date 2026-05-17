@@ -36,6 +36,7 @@ class ActivityLogAdminRecordingTest extends TestCase
             'reviews.read', 'reviews.update', 'reviews.delete',
             'settings.read', 'settings.update',
             'dashboard.view', 'products.images.delete',
+            'roles.create', 'roles.read', 'roles.update', 'roles.delete',
         ];
         foreach ($permissions as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
@@ -304,6 +305,63 @@ class ActivityLogAdminRecordingTest extends TestCase
             'type' => 'settings_updated',
             'user_id' => $this->admin->id,
             'description' => 'Settings updated',
+        ]);
+    }
+
+    public function test_logs_order_payment_change(): void
+    {
+        $order = $this->createOrder();
+
+        $this->actingAs($this->admin)->put("/admin/orders/{$order->id}", [
+            'status' => 'pending',
+            'payment_status' => 'paid',
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'order_payment_changed',
+            'user_id' => $this->admin->id,
+            'description' => "Order #{$order->order_number} payment changed: pending → paid",
+        ]);
+    }
+
+    public function test_logs_role_creation(): void
+    {
+        $this->actingAs($this->admin)->post('/admin/users/roles', [
+            'name' => 'editor',
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'role_created',
+            'user_id' => $this->admin->id,
+            'description' => 'Role created: editor',
+        ]);
+    }
+
+    public function test_logs_role_update(): void
+    {
+        $role = Role::create(['name' => 'editor', 'guard_name' => 'web']);
+
+        $this->actingAs($this->admin)->post("/admin/users/roles/{$role->id}", [
+            'name' => 'super-editor',
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'role_updated',
+            'user_id' => $this->admin->id,
+            'description' => 'Role updated: super-editor',
+        ]);
+    }
+
+    public function test_logs_role_deletion(): void
+    {
+        $role = Role::create(['name' => 'editor', 'guard_name' => 'web']);
+
+        $this->actingAs($this->admin)->delete("/admin/users/roles/{$role->id}");
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'role_deleted',
+            'user_id' => $this->admin->id,
+            'description' => 'Role deleted: editor',
         ]);
     }
 }

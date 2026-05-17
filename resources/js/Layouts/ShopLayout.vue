@@ -197,15 +197,17 @@
                     <div>
                         <h4 class="font-semibold mb-4">Support</h4>
                         <ul class="space-y-3 text-gray-400 text-sm">
-                            <li><a href="#" class="hover:text-white">Contact</a></li>
+                            <li><Link :href="route('contact')" class="hover:text-white">Contact</Link></li>
                             <li><a href="#" class="hover:text-white">Shipping</a></li>
                         </ul>
                     </div>
                     <div>
                         <h4 class="font-semibold mb-4">Newsletter</h4>
-                        <form @submit.prevent="subscribe" class="flex">
-                            <input v-model="email" type="email" placeholder="Your email" class="bg-gray-800 dark:bg-gray-900 px-4 py-2 rounded-l-lg text-white w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-700 dark:border-gray-600">
-                            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r-lg transition-colors">Subscribe</button>
+                        <div v-if="subscribed" class="text-green-400 text-sm mb-2">Thanks for subscribing!</div>
+                        <p v-else-if="subscribeError" class="text-red-400 text-sm mb-2">{{ subscribeError }}</p>
+                        <form v-if="!subscribed" @submit.prevent="subscribe" class="flex">
+                            <input v-model="email" type="email" placeholder="Your email" :disabled="subscribing" class="bg-gray-800 dark:bg-gray-900 px-4 py-2 rounded-l-lg text-white w-full focus:outline-none focus:ring-2 focus:ring-indigo-500 border border-gray-700 dark:border-gray-600 disabled:opacity-50">
+                            <button type="submit" :disabled="subscribing" class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-r-lg transition-colors disabled:opacity-50">{{ subscribing ? '...' : 'Subscribe' }}</button>
                         </form>
                     </div>
                 </div>
@@ -220,6 +222,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
+import axios from 'axios';
 import { useCartStore } from '../Stores/cart';
 import { useWishlistStore } from '../Stores/wishlist';
 import { usePermission } from '../composables/usePermission';
@@ -233,6 +236,9 @@ const page = usePage();
 const cartStore = useCartStore();
 const wishlistStore = useWishlistStore();
 const email = ref('');
+const subscribed = ref(false);
+const subscribing = ref(false);
+const subscribeError = ref('');
 const mobileMenuOpen = ref(false);
 const userDropdownOpen = ref(false);
 
@@ -250,7 +256,20 @@ function isActive(url) {
 }
 
 function subscribe() {
-    email.value = '';
+    if (!email.value) return;
+    subscribing.value = true;
+    subscribeError.value = '';
+    axios.post('/api/newsletter/subscribe', { email: email.value })
+        .then(() => {
+            subscribed.value = true;
+            email.value = '';
+        })
+        .catch((err) => {
+            subscribeError.value = err.response?.data?.errors?.email?.[0] || 'Something went wrong.';
+        })
+        .finally(() => {
+            subscribing.value = false;
+        });
 }
 
 function logout() {

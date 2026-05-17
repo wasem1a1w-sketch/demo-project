@@ -148,4 +148,117 @@ class ActivityLogRecordingTest extends TestCase
             'description' => "Review submitted for product: {$product->name}",
         ]);
     }
+
+    public function test_logs_user_logout(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'john@example.com',
+            'password' => bcrypt('Password1!'),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'john@example.com',
+            'password' => 'Password1!',
+        ]);
+
+        $this->post('/logout');
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'user_logout',
+            'user_id' => $user->id,
+            'description' => "User logged out: {$user->email}",
+        ]);
+    }
+
+    public function test_logs_address_creation(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/addresses', [
+            'type' => 'shipping',
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'address1' => '123 Main St',
+            'city' => 'New York',
+            'state' => 'NY',
+            'postal_code' => '10001',
+            'country' => 'USA',
+            'phone' => '1234567890',
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'address_created',
+            'user_id' => $user->id,
+            'description' => 'Address created: 123 Main St, New York',
+        ]);
+    }
+
+    public function test_logs_cart_item_added(): void
+    {
+        $product = Product::factory()->create([
+            'is_active' => true,
+            'stock' => 99,
+            'category_id' => $this->category->id,
+        ]);
+
+        $this->postJson('/api/cart/add', [
+            'product_id' => $product->id,
+            'quantity' => 2,
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'cart_item_added',
+            'description' => "Item added to cart: {$product->name} x2",
+        ]);
+    }
+
+    public function test_logs_coupon_applied(): void
+    {
+        $product = Product::factory()->create([
+            'is_active' => true,
+            'stock' => 99,
+            'category_id' => $this->category->id,
+        ]);
+
+        $this->postJson('/api/cart/add', [
+            'product_id' => $product->id,
+            'quantity' => 1,
+        ]);
+
+        $coupon = Coupon::factory()->create([
+            'code' => 'SAVE10',
+            'type' => 'percentage',
+            'value' => 10,
+            'min_order_amount' => 0,
+            'usage_limit' => 100,
+            'used_count' => 0,
+            'is_active' => true,
+        ]);
+
+        $this->postJson('/api/cart/coupon', ['code' => 'SAVE10']);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'coupon_applied',
+            'description' => 'Coupon applied: SAVE10',
+        ]);
+    }
+
+    public function test_logs_wishlist_item_added(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create([
+            'is_active' => true,
+            'category_id' => $this->category->id,
+        ]);
+
+        $this->actingAs($user)->postJson('/api/wishlist/add', [
+            'product_id' => $product->id,
+        ]);
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'wishlist_item_added',
+            'user_id' => $user->id,
+            'description' => "Item added to wishlist: {$product->name}",
+        ]);
+    }
 }

@@ -63,6 +63,16 @@ class UserController extends Controller
         return redirect()->route('admin.users')->with('success', 'User created successfully.');
     }
 
+    public function show(User $user)
+    {
+        $user->load('roles');
+
+        return Inertia::render('Admin/Users/Show', [
+            'user' => $user,
+            'userRole' => $user->roles->first()?->name ?? '',
+        ]);
+    }
+
     public function edit(User $user)
     {
         $user->load('roles');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Address;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 
 class AddressController extends Controller
@@ -45,6 +46,8 @@ class AddressController extends Controller
 
         Address::create($validated);
 
+        UserActivityLog::record(auth()->id(), 'address_created', "Address created: {$validated['address1']}, {$validated['city']}");
+
         return back();
     }
 
@@ -73,12 +76,19 @@ class AddressController extends Controller
 
         $address->update($validated);
 
+        UserActivityLog::record(auth()->id(), 'address_updated', "Address updated: {$validated['address1']}, {$validated['city']}");
+
         return back();
     }
 
     public function destroy($id)
     {
-        auth()->user()->addresses()->findOrFail($id)->delete();
+        $address = auth()->user()->addresses()->findOrFail($id);
+
+        UserActivityLog::record(auth()->id(), 'address_deleted', "Address deleted: {$address->address1}, {$address->city}");
+
+        $address->delete();
+
         return back();
     }
 }

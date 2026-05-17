@@ -40,6 +40,7 @@ class OrderController extends Controller
         ]);
 
         $originalStatus = $order->status;
+        $originalPaymentStatus = $order->payment_status;
 
         $order->update($validated);
 
@@ -63,6 +64,10 @@ class OrderController extends Controller
                     'message' => "Order #{$order->order_number} is now {$validated['status']}",
                 ], $order->user->id));
             }
+        }
+
+        if ($originalPaymentStatus !== $validated['payment_status']) {
+            UserActivityLog::record(auth()->id(), 'order_payment_changed', "Order #{$order->order_number} payment changed: {$originalPaymentStatus} → {$validated['payment_status']}");
         }
 
         if ($validated['status'] === 'cancelled' && $originalStatus !== 'cancelled') {
