@@ -120,6 +120,13 @@
                                 <p class="text-sm text-gray-500">Pay with PayPal</p>
                             </div>
                         </label>
+                        <label class="flex items-center p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                            <input v-model="form.payment_method" type="radio" value="offline" class="mr-3">
+                            <div>
+                                <span class="font-medium">Offline Payment</span>
+                                <p class="text-sm text-gray-500">Pay on delivery or bank transfer</p>
+                            </div>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -288,13 +295,21 @@ async function placeOrder() {
             coupon_id: cartStore.coupon?.id || null,
         };
 
-        const response = await axios.post('/api/orders', orderData);
-        cartStore.items = [];
-        cartStore.coupon = null;
-        router.visit(route('orders.show', { orderNumber: response.data.order_number }));
+        const orderResponse = await axios.post('/api/orders', orderData);
+
+        if (form.payment_method === 'offline') {
+            router.visit(route('orders.show', { orderNumber: orderResponse.data.order_number }));
+            return;
+        }
+
+        const sessionResponse = await axios.post('/api/payments/create-session', {
+            order_id: orderResponse.data.order_id,
+        });
+
+        window.location.href = sessionResponse.data.checkout_url;
     } catch (e) {
         console.error('Order error:', e.response?.data || e.message);
-        errorMessage.value = e.response?.data?.message || 'Failed to place order';
+        errorMessage.value = e.response?.data?.error || e.response?.data?.message || 'Failed to place order';
         if (e.response?.data?.errors) {
             const errors = Object.values(e.response.data.errors).flat();
             errorMessage.value = errors.join(', ');
