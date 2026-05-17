@@ -27,8 +27,20 @@ class ActivityLogAdminRecordingTest extends TestCase
         parent::setUp();
 
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $permissions = Permission::pluck('id')->toArray();
-        $adminRole->syncPermissions($permissions);
+        $permissions = [
+            'admin.access',
+            'products.create', 'products.read', 'products.update', 'products.delete',
+            'categories.create', 'categories.read', 'categories.update', 'categories.delete',
+            'orders.read', 'orders.update',
+            'users.create', 'users.read', 'users.update', 'users.delete',
+            'reviews.read', 'reviews.update', 'reviews.delete',
+            'settings.read', 'settings.update',
+            'dashboard.view', 'products.images.delete',
+        ];
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+        $adminRole->syncPermissions(Permission::pluck('id')->toArray());
 
         $this->admin = User::factory()->create();
         $this->admin->assignRole('admin');

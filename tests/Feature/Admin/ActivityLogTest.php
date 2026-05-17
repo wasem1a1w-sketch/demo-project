@@ -37,7 +37,7 @@ class ActivityLogTest extends TestCase
         $response = $this->actingAs($this->admin)->get('/admin/activity-logs');
 
         $response->assertStatus(200);
-        $response->assertSee('Admin/ActivityLogs/Index');
+        $response->assertSee('Admin\\/ActivityLogs\\/Index');
     }
 
     public function test_non_admin_cannot_access_activity_logs_page(): void
