@@ -74,7 +74,7 @@ class ProductController extends Controller
             'slug' => $product->slug,
             'price' => $product->price,
             'category' => $product->category?->name,
-            'image' => $product->images->first()?->image_path,
+            'image' => $product->images->first()?->icon_path,
         ]);
 
         return response()->json($results);

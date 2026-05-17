@@ -55,7 +55,7 @@
                     <p v-if="mainImageError" class="mt-1 text-xs text-red-500">{{ mainImageError }}</p>
                     <div v-if="mainImagePreview" class="mt-4">
                         <div class="relative w-48 h-48 rounded-lg overflow-hidden border-2 border-indigo-500">
-                            <img :src="mainImagePreview" class="w-full h-full object-contain">
+                            <LazyImage :src="mainImagePreview" img-class="object-contain" />
                             <button type="button" @click="removeMainImage" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-1 text-xs">&times;</button>
                             <div class="absolute bottom-0 left-0 right-0 bg-indigo-600 text-white text-xs py-1 text-center font-medium">Main Image</div>
                         </div>
@@ -70,7 +70,7 @@
                     <div v-if="galleryPreviews.length" class="mt-4 flex gap-2 flex-wrap">
                         <div v-for="(img, idx) in galleryPreviews" :key="idx"
                              class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
-                            <img :src="img" class="w-full h-full object-contain">
+                            <LazyImage :src="img" img-class="object-contain" />
                             <button type="button" @click="removeGalleryImage(idx)" class="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5 text-xs leading-none">&times;</button>
                         </div>
                     </div>
@@ -102,6 +102,7 @@
 import { reactive, ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { usePermission } from '../../../composables/usePermission';
+import LazyImage from '../../../components/LazyImage.vue';
 
 const { can } = usePermission();
 

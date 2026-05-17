@@ -40,7 +40,11 @@ class CartController extends Controller
                         'slug' => $product->slug,
                         'price' => $product->price,
                         'stock' => $product->stock,
-                        'images' => $product->images->map(fn ($img) => ['image_path' => $img->image_path])->toArray(),
+                        'images' => $product->images->map(fn ($img) => [
+                            'image_path' => $img->image_path,
+                            'thumb_path' => $img->thumb_path,
+                            'icon_path' => $img->icon_path,
+                        ])->toArray(),
                     ],
                 ];
             })

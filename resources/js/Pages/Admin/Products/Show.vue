@@ -23,7 +23,7 @@
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Images</h3>
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                         <div v-for="image in product.images" :key="image.id" class="relative group">
-                            <img :src="`/${image.image_path}`" class="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700">
+                            <LazyImage :src="`/${image.thumb_path || image.image_path}`" img-class="object-cover rounded-lg border border-gray-200 dark:border-gray-700" />
                             <span v-if="image.is_primary" class="absolute top-2 left-2 bg-indigo-600 text-white text-xs px-2 py-0.5 rounded font-medium">Primary</span>
                         </div>
                     </div>
@@ -85,6 +85,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import { usePermission } from '../../../composables/usePermission';
+import LazyImage from '../../../components/LazyImage.vue';
 
 const { can } = usePermission();
 

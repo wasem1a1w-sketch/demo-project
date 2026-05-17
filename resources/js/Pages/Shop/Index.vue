@@ -43,7 +43,8 @@
                                     <div v-if="autocompleteLoading" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">Searching...</div>
                                     <template v-else>
                                         <button v-for="product in autocompleteResults" :key="product.id" @click.prevent="selectSuggestion(product)" class="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center gap-3">
-                                            <img v-if="product.image" :src="`/${product.image}`" alt="" class="h-10 w-10 rounded-lg object-cover" />
+                                            <LazyImage v-if="product.image" :src="`/${product.image}`" alt="" img-class="rounded-lg object-cover" />
+                                            
                                             <div class="min-w-0">
                                                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ product.name }}</p>
                                                 <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ product.category || 'Product' }}</p>
@@ -73,7 +74,7 @@
                         <div v-for="product in (products.data || products)" :key="product.id" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                             <Link :href="route('product', product.slug)">
                                 <div class="aspect-square bg-gray-100 dark:bg-gray-700 relative">
-                                    <img v-if="product.images?.length" :src="`/${product.images[0].image_path}`" :alt="product.name" class="w-full h-full object-contain">
+                                    <LazyImage v-if="product.images?.length" :src="`/${product.images[0].thumb_path || product.images[0].image_path}`" :alt="product.name" img-class="object-contain" />
                                     <div v-else class="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-500">
                                         <svg class="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                                     </div>
@@ -120,6 +121,7 @@ import { useCartStore } from '../../Stores/cart';
 import { useWishlistStore } from '../../Stores/wishlist';
 import ShopLayout from '../../Layouts/ShopLayout.vue';
 import StarRating from '../../components/StarRating.vue';
+import LazyImage from '../../components/LazyImage.vue';
 
 const page = usePage();
 const cartStore = useCartStore();

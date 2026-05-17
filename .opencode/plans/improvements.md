@@ -1,6 +1,7 @@
 # Future Improvements
 
 ## High Impact
+- [x] **Image Optimization** — Product images resized + converted to WebP via Imagick (original 1920px, thumb 400px, icon 100px), stored in `uploads/original/`, `uploads/thumbnails/`, `uploads/icons/`
 - [x] **Payment Integration** — Stripe/PayPal payment processing with webhook handling, retry logic, stock management, TDD (27 backend tests, 10 frontend tests passing)
 - [x] **Product Reviews & Ratings** — Customers can leave reviews (pending admin approval), average rating shown on product cards and detail page, admin panel for approve/reject, admin notifications on submission
 - [x] **Wishlist** — Save-for-later / favorites for logged-in users
@@ -25,6 +26,7 @@
 - [ ] **Export/Import** — No CSV/Excel for products or orders
 - [x] **Contact Page** — Contact form with name/email/message, stored in DB, linked from footer
 - [x] **Newsletter** — Subscribe/unsubscribe API endpoint, wired to footer form with success/error feedback
+- [x] **Lazy Image Loading** — Product images lazy-loaded via IntersectionObserver component
 - [ ] **Frontend Tests** — Only empty directories exist for Vitest
 - [ ] **Multi-language** — No i18n support
 - [ ] **Public API** — Sanctum installed but no token auth for external clients

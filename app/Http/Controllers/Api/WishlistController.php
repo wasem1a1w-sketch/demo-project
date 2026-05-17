@@ -88,7 +88,7 @@ class WishlistController extends Controller
                         'slug' => $product->slug,
                         'price' => $product->price,
                         'compare_price' => $product->compare_price,
-                        'image' => $product->primaryImage?->image_path,
+                        'image' => $product->primaryImage?->thumb_path,
                         'in_stock' => $product->stock > 0,
                         'reviews_avg_rating' => (float) $product->reviews()->where('is_approved', true)->avg('rating'),
                         'reviews_count' => $product->reviews()->where('is_approved', true)->count(),

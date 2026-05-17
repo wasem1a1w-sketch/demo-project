@@ -14,7 +14,11 @@ class ProductImageController extends Controller
     {
         $image = ProductImage::findOrFail($id);
 
-        Storage::disk('public')->delete($image->image_path);
+        Storage::disk('public')->delete(array_filter([
+            $image->image_path,
+            $image->thumb_path,
+            $image->icon_path,
+        ]));
 
         $product = $image->product;
 

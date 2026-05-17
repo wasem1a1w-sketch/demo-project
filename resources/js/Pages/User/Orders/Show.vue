@@ -17,8 +17,14 @@
                     <div class="bg-white rounded-lg shadow-sm p-6">
                         <h2 class="text-lg font-semibold mb-4">Items</h2>
                         <div class="divide-y">
-                            <div v-for="item in order.items" :key="item.id" class="flex justify-between py-3">
-                                <div>
+                            <div v-for="item in order.items" :key="item.id" class="flex items-center gap-3 py-3">
+                                <div class="w-12 h-12 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                                    <LazyImage v-if="item.product?.images?.length"
+                                         :src="`/${item.product.images[0].icon_path || item.product.images[0].image_path}`"
+                                         :alt="item.product_name"
+                                         img-class="object-contain" />
+                                </div>
+                                <div class="flex-1">
                                     <p class="font-medium">{{ item.product_name }}</p>
                                     <p class="text-sm text-gray-500">Qty: {{ item.quantity }} × ${{ Number(item.price).toFixed(2) }}</p>
                                 </div>
@@ -95,6 +101,7 @@ import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import ShopLayout from '../../../Layouts/ShopLayout.vue';
+import LazyImage from '../../../components/LazyImage.vue';
 
 const props = defineProps({
     order: { type: Object, required: true },

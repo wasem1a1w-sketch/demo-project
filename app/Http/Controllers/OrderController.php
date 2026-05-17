@@ -22,7 +22,7 @@ class OrderController extends Controller
 
     public function show($orderNumber)
     {
-        $order = Order::with('items', 'payments')
+        $order = Order::with('items.product.images', 'payments')
             ->where('order_number', $orderNumber)
             ->firstOrFail();
 
