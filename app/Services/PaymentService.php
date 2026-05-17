@@ -33,7 +33,7 @@ class PaymentService
             $id = 'cs_test_' . uniqid();
             return [
                 'session_id' => $id,
-                'checkout_url' => 'https://checkout.stripe.com/pay/' . $id,
+                'checkout_url' => route('checkout.success') . '?session_id=' . $id,
             ];
         }
 
