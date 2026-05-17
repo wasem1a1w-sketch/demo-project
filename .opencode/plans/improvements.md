@@ -1,7 +1,7 @@
 # Future Improvements
 
 ## High Impact
-- [ ] **Payment Integration** — Stripe/PayPal payment processing with webhook handling, retry logic, and stock management (foundation implemented, tests written)
+- [x] **Payment Integration** — Stripe/PayPal payment processing with webhook handling, retry logic, stock management, TDD (27 backend tests, 10 frontend tests passing)
 - [x] **Product Reviews & Ratings** — Customers can leave reviews (pending admin approval), average rating shown on product cards and detail page, admin panel for approve/reject, admin notifications on submission
 - [x] **Wishlist** — Save-for-later / favorites for logged-in users
 - [x] **Activity Logs Page** — Admin activity log viewer with filtering by type and date range

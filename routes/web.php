@@ -10,6 +10,7 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController as ShopOrderController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\VerificationController;
@@ -31,6 +32,7 @@ Route::get('/shop', [ShopController::class, 'shop'])->name('shop');
 Route::get('/product/{slug}', [ShopController::class, 'product'])->name('product');
 Route::get('/cart', [ShopController::class, 'cart'])->name('cart');
 Route::get('/checkout', [ShopController::class, 'checkout'])->name('checkout');
+Route::get('/checkout/success', [ShopController::class, 'checkoutSuccess'])->name('checkout.success');
 Route::get('/categories', [ShopController::class, 'categories'])->name('categories');
 Route::get('/orders/{orderNumber}', [ShopOrderController::class, 'show'])->name('orders.show');
 
@@ -63,6 +65,11 @@ Route::prefix('api')->group(function () {
     Route::post('newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
     Route::post('orders', [ApiOrderController::class, 'store'])->middleware('throttle:checkout');
     Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
+
+    // Payment routes (session auth via web middleware)
+    Route::post('payments/create-session', [PaymentController::class, 'createCheckoutSession'])->middleware('auth');
+    Route::post('payments/{order}/retry', [PaymentController::class, 'retryPayment'])->middleware('auth');
+    Route::get('payments/success', [PaymentController::class, 'confirmSuccess'])->middleware('auth');
 
     // Public: anyone can view approved reviews
     Route::get('products/{product}/reviews', [ProductReviewController::class, 'index']);

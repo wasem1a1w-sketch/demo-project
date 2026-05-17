@@ -32,7 +32,7 @@ class OrderController extends Controller
             'postal_code' => ['required', 'string', 'max:20'],
             'country' => ['required', 'string', 'max:255'],
             'phone' => ['required', 'string', 'max:30'],
-            'payment_method' => ['required', 'in:stripe,paypal'],
+            'payment_method' => ['required', 'in:stripe,paypal,offline'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
             'items.*.quantity' => ['required', 'integer', 'min:1', 'max:99'],
@@ -179,6 +179,7 @@ class OrderController extends Controller
         }
 
         return response()->json([
+            'order_id' => $order->id,
             'order_number' => $order->order_number,
             'message' => 'Order placed successfully',
         ]);
