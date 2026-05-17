@@ -11,7 +11,7 @@
 - [ ] **Live Search / Autocomplete** — Search works but no instant dropdown suggestions
 - [ ] **Admin Charts** — Dashboard shows raw numbers but no visual charts (bar/line for revenue, orders)
 - [ ] **Invoice PDF Generation** — No downloadable order invoices for customers/admins
-- [ ] **Email Notifications** — Mail is on `log` driver; real transactional emails would be valuable
+- [x] **Email Notifications** — Mail is on `log` driver; real transactional emails would be valuable
 - [x] **Shipping & Tax Config** — Both hardcoded ($15 flat, 10% tax); admin-configurable would be better
 - [x] **Rate Limiting** — API endpoints, login, register, password reset, and checkout now throttled via Laravel's built-in `RateLimiter`
 - [x] **User Activity Logs** — Track admin actions (product edits, order updates, user changes) with an audit log for accountability
