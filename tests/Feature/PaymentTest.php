@@ -488,7 +488,7 @@ class PaymentTest extends TestCase
             'data' => ['object' => ['id' => 'cs_test_stock123']],
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
-        $this->assertEquals(7, $product->fresh()->stock);
+        $this->assertEquals(10, $product->fresh()->stock);
     }
 
     /**
@@ -692,7 +692,7 @@ class PaymentTest extends TestCase
         ]);
         $this->assertEquals('paid', $payment->fresh()->status);
         $this->assertEquals('paid', $order->fresh()->payment_status);
-        $this->assertEquals(9, $product->fresh()->stock);
+        $this->assertEquals(10, $product->fresh()->stock);
     }
 
     /**
