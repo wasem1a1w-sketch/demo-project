@@ -49,6 +49,36 @@
         </div>
     </div>
 
+    <!-- Charts -->
+    <div v-if="can('orders.read')" class="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Orders Last 7 Days</h2>
+            </div>
+            <div class="p-6">
+                <ApexChart
+                    type="line"
+                    height="320"
+                    :options="ordersChartOptions"
+                    :series="[{ name: 'Orders', data: orderChartSeries }]"
+                />
+            </div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Revenue Last 7 Days</h2>
+            </div>
+            <div class="p-6">
+                <ApexChart
+                    type="bar"
+                    height="320"
+                    :options="revenueChartOptions"
+                    :series="[{ name: 'Revenue', data: revenueChartSeries }]"
+                />
+            </div>
+        </div>
+    </div>
+
     <!-- Recent Orders Table -->
     <div v-if="can('orders.read')" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
@@ -96,7 +126,51 @@ const { can } = usePermission();
 const props = defineProps({
     stats: { type: Object, default: () => ({ products: 0, orders: 0, pendingOrders: 0, revenue: 0 }) },
     recentOrders: { type: Array, default: () => [] },
+    orderChartLabels: { type: Array, default: () => [] },
+    orderChartSeries: { type: Array, default: () => [] },
+    revenueChartLabels: { type: Array, default: () => [] },
+    revenueChartSeries: { type: Array, default: () => [] },
 });
+
+const ordersChartOptions = {
+    chart: {
+        toolbar: { show: false },
+        zoom: { enabled: false },
+    },
+    dataLabels: { enabled: false },
+    stroke: { curve: 'smooth', width: 3 },
+    xaxis: {
+        categories: props.orderChartLabels,
+        labels: { style: { colors: '#6b7280', fontSize: '12px' } },
+    },
+    yaxis: {
+        labels: { style: { colors: '#6b7280', fontSize: '12px' } },
+        title: { text: 'Orders', style: { color: '#6b7280' } },
+    },
+    tooltip: { theme: 'light' },
+    grid: { strokeDashArray: 4 },
+    colors: ['#6366f1'],
+};
+
+const revenueChartOptions = {
+    chart: {
+        toolbar: { show: false },
+        zoom: { enabled: false },
+    },
+    dataLabels: { enabled: false },
+    plotOptions: { bar: { borderRadius: 8, columnWidth: '55%' } },
+    xaxis: {
+        categories: props.revenueChartLabels,
+        labels: { style: { colors: '#6b7280', fontSize: '12px' } },
+    },
+    yaxis: {
+        labels: { style: { colors: '#6b7280', fontSize: '12px' } },
+        title: { text: 'Revenue ($)', style: { color: '#6b7280' } },
+    },
+    tooltip: { theme: 'light', y: { formatter: (value) => `$${value}` } },
+    grid: { strokeDashArray: 4 },
+    colors: ['#10b981'],
+};
 
 function statusClass(status) {
     const base = 'px-2.5 py-1 rounded-full text-xs font-medium';

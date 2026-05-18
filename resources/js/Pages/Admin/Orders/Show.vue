@@ -86,8 +86,10 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                <tr v-for="item in order.items" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                                    <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">{{ item.product_name }}</td>
+                                    <tr v-for="item in order.items" :key="item.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                        <td class="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                            {{ item.product_name }}
+                                        </td>
                                     <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 text-right">${{ Number(item.price).toFixed(2) }}</td>
                                     <td class="px-6 py-4 text-sm text-gray-900 dark:text-white text-center">
                                         <span class="inline-flex items-center justify-center w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-medium">{{ item.quantity }}</span>

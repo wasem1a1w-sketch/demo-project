@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Order;
 use App\Models\Product;
 use Inertia\Inertia;
 
@@ -49,6 +50,21 @@ class ShopController extends Controller
     public function checkout()
     {
         return Inertia::render('Checkout/Index');
+    }
+
+    public function checkoutSuccess()
+    {
+        $order = null;
+        if (auth()->check()) {
+            $order = Order::with('items')
+                ->where('user_id', auth()->id())
+                ->orderByDesc('created_at')
+                ->first();
+        }
+
+        return Inertia::render('Checkout/Success', [
+            'initialOrder' => $order,
+        ]);
     }
 
     public function categories()

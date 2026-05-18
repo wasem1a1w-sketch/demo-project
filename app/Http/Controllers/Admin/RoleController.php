@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -38,6 +39,8 @@ class RoleController extends Controller
         if (!empty($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
+
+        UserActivityLog::record(auth()->id(), 'role_created', "Role created: {$role->name}");
 
         return redirect()->route('admin.users', ['tab' => 'roles'])
             ->with('success', 'Role created successfully.');
@@ -83,6 +86,8 @@ class RoleController extends Controller
 
         $role->syncPermissions($data['permissions'] ?? []);
 
+        UserActivityLog::record(auth()->id(), 'role_updated', "Role updated: {$role->name}");
+
         return redirect()->route('admin.users', ['tab' => 'roles'])
             ->with('success', 'Role updated successfully.');
     }
@@ -93,6 +98,8 @@ class RoleController extends Controller
             return redirect()->route('admin.users', ['tab' => 'roles'])
                 ->with('error', 'Cannot delete system roles.');
         }
+
+        UserActivityLog::record(auth()->id(), 'role_deleted', "Role deleted: {$role->name}");
 
         $role->delete();
 

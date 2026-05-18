@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
 use App\Models\Product;
 use App\Models\ProductReview;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 
 class ProductReviewController extends Controller
@@ -51,6 +52,8 @@ class ProductReviewController extends Controller
 
         $review->load('user:id,name');
 
+        UserActivityLog::record($request->user()->id, 'review_created', "Review submitted for product: {$product->name}");
+
         AdminNotification::notify('review_submitted', [
             'review_id' => $review->id,
             'product_id' => $product->id,
@@ -79,6 +82,9 @@ class ProductReviewController extends Controller
 
         $validated['is_approved'] = false;
         $review->update($validated);
+
+        UserActivityLog::record($request->user()->id, 'review_updated', "Review #{$review->id} updated for product: {$product->name}");
+
         $review->load('user:id,name');
 
         return response()->json($review);
@@ -89,6 +95,8 @@ class ProductReviewController extends Controller
         if ($review->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
+
+        UserActivityLog::record($request->user()->id, 'review_deleted', "Review #{$review->id} deleted for product: {$product->name}");
 
         $review->delete();
 

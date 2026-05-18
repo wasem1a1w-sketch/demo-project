@@ -6,6 +6,7 @@ use App\Events\ClientNotificationBroadcast;
 use App\Http\Controllers\Controller;
 use App\Models\AdminNotification;
 use App\Models\Order;
+use App\Models\UserActivityLog;
 use App\Notifications\OrderStatusChanged;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -39,10 +40,12 @@ class OrderController extends Controller
         ]);
 
         $originalStatus = $order->status;
+        $originalPaymentStatus = $order->payment_status;
 
         $order->update($validated);
 
         if ($originalStatus !== $validated['status']) {
+            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} → {$validated['status']}");
             AdminNotification::notify('order_status_changed', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
@@ -61,6 +64,10 @@ class OrderController extends Controller
                     'message' => "Order #{$order->order_number} is now {$validated['status']}",
                 ], $order->user->id));
             }
+        }
+
+        if ($originalPaymentStatus !== $validated['payment_status']) {
+            UserActivityLog::record(auth()->id(), 'order_payment_changed', "Order #{$order->order_number} payment changed: {$originalPaymentStatus} → {$validated['payment_status']}");
         }
 
         if ($validated['status'] === 'cancelled' && $originalStatus !== 'cancelled') {

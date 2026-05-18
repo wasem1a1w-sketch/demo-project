@@ -16,7 +16,17 @@ class NewUserRegistered extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['database', 'broadcast'];
+        return ['database', 'broadcast', 'mail'];
+    }
+
+    public function toMail(object $notifiable): MailMessage
+    {
+        return (new MailMessage)
+                    ->subject('Welcome to ' . config('app.name'))
+                    ->greeting('Hello ' . $this->registeredUser->name . '!')
+                    ->line('Thank you for registering on our platform.')
+                    ->action('Visit Our Store', url('/'))
+                    ->line('We are excited to have you with us!');
     }
 
     public function toDatabase(object $notifiable): array

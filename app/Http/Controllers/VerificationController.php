@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\URL;
@@ -37,6 +38,7 @@ class VerificationController extends Controller
 
         if ($user->markEmailAsVerified()) {
             event(new Verified($user));
+            UserActivityLog::record($user->id, 'email_verified', "Email verified for: {$user->email}");
         }
 
         return redirect()->route('login')->with('success', 'Email verified successfully! You can now sign in.');
@@ -49,6 +51,8 @@ class VerificationController extends Controller
         }
 
         $request->user()->sendEmailVerificationNotification();
+
+        UserActivityLog::record($request->user()->id, 'verification_resent', "Verification email resent to: {$request->user()->email}");
 
         return back()->with('success', 'Verification link sent!');
     }

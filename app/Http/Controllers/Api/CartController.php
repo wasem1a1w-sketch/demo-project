@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Product;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -27,22 +28,27 @@ class CartController extends Controller
             ->get()
             ->map(function ($item) {
                 $product = Product::with('images')->find($item->product_id);
+                if (! $product) return null;
 
                 return [
                     'id' => $item->id,
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
-                    'product' => $product ? [
+                    'product' => [
                         'id' => $product->id,
                         'name' => $product->name,
                         'slug' => $product->slug,
                         'price' => $product->price,
                         'stock' => $product->stock,
-                        'images' => $product->images->map(fn ($img) => ['image_path' => $img->image_path])->toArray(),
-                    ] : null,
+                        'images' => $product->images->map(fn ($img) => [
+                            'image_path' => $img->image_path,
+                            'thumb_path' => $img->thumb_path,
+                            'icon_path' => $img->icon_path,
+                        ])->toArray(),
+                    ],
                 ];
             })
-            ->filter(fn ($item) => $item['product'] !== null)
+            ->filter()
             ->values();
     }
 
@@ -105,6 +111,8 @@ class CartController extends Controller
             ]);
         }
 
+        UserActivityLog::record(auth()->id(), 'cart_item_added', "Item added to cart: {$product->name} x{$quantity}");
+
         return response()->json([
             'items' => $this->getCart(),
             'coupon' => $this->getCoupon(),
@@ -126,10 +134,12 @@ class CartController extends Controller
             return response()->json(['message' => 'Item not found'], 404);
         }
 
+        $product = Product::find($item->product_id);
+
         if ($request->quantity === 0) {
             \DB::table('cart_items')->where('id', $id)->delete();
+            UserActivityLog::record(auth()->id(), 'cart_item_removed', "Item removed from cart: {$product?->name}");
         } else {
-            $product = Product::find($item->product_id);
             if ($product && $product->stock < $request->quantity) {
                 return response()->json(['message' => 'Insufficient stock'], 422);
             }
@@ -137,6 +147,8 @@ class CartController extends Controller
             \DB::table('cart_items')
                 ->where('id', $id)
                 ->update(['quantity' => $request->quantity]);
+
+            UserActivityLog::record(auth()->id(), 'cart_item_updated', "Cart item quantity changed: {$product?->name} → {$request->quantity}");
         }
 
         return response()->json([
@@ -147,10 +159,16 @@ class CartController extends Controller
 
     public function remove($id)
     {
-        \DB::table('cart_items')
+        $item = \DB::table('cart_items')
             ->where('id', $id)
             ->where('session_id', $this->getSessionId())
-            ->delete();
+            ->first();
+
+        if ($item) {
+            $product = Product::find($item->product_id);
+            \DB::table('cart_items')->where('id', $id)->delete();
+            UserActivityLog::record(auth()->id(), 'cart_item_removed', "Item removed from cart: {$product?->name}");
+        }
 
         return response()->json([
             'items' => $this->getCart(),
@@ -165,6 +183,8 @@ class CartController extends Controller
             ->delete();
 
         Session::forget('cart_coupon_id');
+
+        UserActivityLog::record(auth()->id(), 'cart_cleared', 'Cart cleared');
 
         return response()->json([
             'items' => [],
@@ -184,6 +204,8 @@ class CartController extends Controller
 
         Session::put('cart_coupon_id', $coupon->id);
 
+        UserActivityLog::record(auth()->id(), 'coupon_applied', "Coupon applied: {$coupon->code}");
+
         return response()->json([
             'coupon' => $coupon,
             'items' => $this->getCart(),
@@ -193,6 +215,8 @@ class CartController extends Controller
     public function removeCoupon()
     {
         Session::forget('cart_coupon_id');
+
+        UserActivityLog::record(auth()->id(), 'coupon_removed', 'Coupon removed');
 
         return response()->json([
             'items' => $this->getCart(),

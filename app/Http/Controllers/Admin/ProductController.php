@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -71,6 +72,8 @@ class ProductController extends Controller
 
         $product = Product::create(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
 
+        UserActivityLog::record(auth()->id(), 'product_created', "Product created: {$product->name}");
+
         if ($request->hasFile('main_image')) {
             $this->uploadImage($product, $request->file('main_image'), isPrimary: true);
         }
@@ -80,6 +83,13 @@ class ProductController extends Controller
         }
 
         return to_route('admin.products');
+    }
+
+    public function show($id)
+    {
+        $product = Product::with(['category', 'images'])->findOrFail($id);
+
+        return Inertia::render('Admin/Products/Show', ['product' => $product]);
     }
 
     public function edit($id)
@@ -123,9 +133,11 @@ class ProductController extends Controller
 
         $product->update(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
 
+        UserActivityLog::record(auth()->id(), 'product_updated', "Product updated: {$product->name}");
+
         if ($request->hasFile('main_image')) {
             $oldPrimary = $product->images->firstWhere('is_primary', true);
-            if ($oldPrimary) {
+            if ($oldPrimary && $oldPrimary->image_path) {
                 Storage::disk('public')->delete($oldPrimary->image_path);
                 $oldPrimary->delete();
             }
@@ -152,8 +164,14 @@ class ProductController extends Controller
         $product = Product::with('images')->findOrFail($id);
 
         foreach ($product->images as $image) {
-            Storage::disk('public')->delete($image->image_path);
+            Storage::disk('public')->delete(array_filter([
+                $image->image_path,
+                $image->thumb_path,
+                $image->icon_path,
+            ]));
         }
+
+        UserActivityLog::record(auth()->id(), 'product_deleted', "Product deleted: {$product->name}");
 
         $product->delete();
 
@@ -166,21 +184,61 @@ class ProductController extends Controller
             return;
         }
 
-        $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-        $uploadPath = public_path('uploads');
-
-        if (!is_dir($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
+        if (!class_exists(\Imagick::class)) {
+            throw new \RuntimeException('Imagick PHP extension is required for image processing.');
         }
 
-        $file->move($uploadPath, $filename);
-        $path = 'uploads/' . $filename;
+        $baseName = uniqid();
+
+        $dirs = [
+            'original' => public_path('uploads/original'),
+            'thumbnails' => public_path('uploads/thumbnails'),
+            'icons' => public_path('uploads/icons'),
+        ];
+
+        foreach ($dirs as $dir) {
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+        }
+
+        $originalPath = $file->path();
+
+        $full = new \Imagick($originalPath);
+        $full->setImageFormat('webp');
+        $full->setOption('webp:method', '6');
+        $w = $full->getImageWidth();
+        $h = $full->getImageHeight();
+        if ($w > 1920 || $h > 1920) {
+            $full->resizeImage(1920, 1920, \Imagick::FILTER_LANCZOS, 1, true);
+        }
+        $full->setImageCompressionQuality(80);
+        $full->writeImage(public_path("uploads/original/{$baseName}.webp"));
+        $full->clear();
+
+        $thumb = new \Imagick($originalPath);
+        $thumb->setImageFormat('webp');
+        $thumb->setOption('webp:method', '6');
+        $thumb->resizeImage(400, 400, \Imagick::FILTER_LANCZOS, 1, true);
+        $thumb->setImageCompressionQuality(80);
+        $thumb->writeImage(public_path("uploads/thumbnails/{$baseName}.webp"));
+        $thumb->clear();
+
+        $icon = new \Imagick($originalPath);
+        $icon->setImageFormat('webp');
+        $icon->setOption('webp:method', '6');
+        $icon->resizeImage(100, 100, \Imagick::FILTER_LANCZOS, 1, true);
+        $icon->setImageCompressionQuality(70);
+        $icon->writeImage(public_path("uploads/icons/{$baseName}.webp"));
+        $icon->clear();
 
         $order = $isPrimary ? 0 : $product->images()->where('is_primary', false)->count() + 1;
 
         $productImage = ProductImage::create([
             'product_id' => $product->id,
-            'image_path' => $path,
+            'image_path' => "uploads/original/{$baseName}.webp",
+            'thumb_path' => "uploads/thumbnails/{$baseName}.webp",
+            'icon_path' => "uploads/icons/{$baseName}.webp",
             'is_primary' => $isPrimary,
             'order' => $order,
         ]);

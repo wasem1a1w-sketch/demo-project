@@ -1,0 +1,5 @@
+{
+    "run caddy": "caddy run --config Caddyfile.local --adapter caddyfile",
+    "start reverb": "php artisan reverb:start",
+    "give user file ownership": "sudo chown -R user:user {project_path} && echo 'done'"
+}

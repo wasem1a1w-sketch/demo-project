@@ -55,6 +55,31 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
+    public function autocomplete(Request $request)
+    {
+        $query = Product::query()
+            ->active()
+            ->with(['images', 'category'])
+            ->when($request->search, fn ($q, $value) => $q->where(function ($q) use ($value) {
+                $q->where('name', 'like', "%{$value}%")
+                    ->orWhere('description', 'like', "%{$value}%");
+            }))
+            ->orderBy('created_at', 'desc')
+            ->limit(7)
+            ->get(['id', 'name', 'slug', 'price', 'category_id']);
+
+        $results = $query->map(fn ($product) => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'price' => $product->price,
+            'category' => $product->category?->name,
+            'image' => $product->images->first()?->icon_path,
+        ]);
+
+        return response()->json($results);
+    }
+
     public function show($slug)
     {
         $sub = DB::table('product_reviews')

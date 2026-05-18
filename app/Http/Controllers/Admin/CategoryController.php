@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -29,7 +30,9 @@ class CategoryController extends Controller
             'order' => 'integer|min:0',
         ]);
 
-        Category::create($validated);
+        $category = Category::create($validated);
+
+        UserActivityLog::record(auth()->id(), 'category_created', "Category created: {$category->name}");
 
         return back();
     }
@@ -49,12 +52,16 @@ class CategoryController extends Controller
 
         $category->update($validated);
 
+        UserActivityLog::record(auth()->id(), 'category_updated', "Category updated: {$category->name}");
+
         return back();
     }
 
     public function destroy($id)
     {
-        Category::findOrFail($id)->delete();
+        $category = Category::findOrFail($id);
+        UserActivityLog::record(auth()->id(), 'category_deleted', "Category deleted: {$category->name}");
+        $category->delete();
 
         return back();
     }

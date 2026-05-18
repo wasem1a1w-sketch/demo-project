@@ -6,8 +6,11 @@ use App\Http\Controllers\Api\OrderController as ApiOrderController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\WishlistController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OrderController as ShopOrderController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\ShopController;
 use App\Http\Controllers\VerificationController;
@@ -15,86 +18,98 @@ use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::middleware('web')->match(['get', 'post'], '/broadcasting/auth', [
+Route::match(['get', 'post'], '/broadcasting/auth', [
     \Illuminate\Broadcasting\BroadcastController::class, 'authenticate'
 ])->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\PreventRequestForgery::class);
 
-Route::middleware('web')->group(function () {
-    // Shop routes
-    Route::get('/', [ShopController::class, 'index'])->name('home');
-    Route::get('/shop', [ShopController::class, 'shop'])->name('shop');
-    Route::get('/product/{slug}', [ShopController::class, 'product'])->name('product');
-    Route::get('/cart', [ShopController::class, 'cart'])->name('cart');
-    Route::get('/checkout', [ShopController::class, 'checkout'])->name('checkout');
-    Route::get('/categories', [ShopController::class, 'categories'])->name('categories');
-    Route::get('/orders/{orderNumber}', [ShopOrderController::class, 'show'])->name('orders.show');
+// Contact
+Route::get('/contact', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact', [ContactController::class, 'store']);
 
-    // User routes (authenticated)
-    Route::middleware('auth')->group(function () {
-        Route::get('/orders', [ShopOrderController::class, 'index'])->name('orders.index');
-        Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
-        Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
-        Route::put('/addresses/{id}', [AddressController::class, 'update'])->name('addresses.update');
-        Route::delete('/addresses/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
-        Route::get('/wishlist', [ShopController::class, 'wishlist'])->name('wishlist');
+// Shop routes
+Route::get('/', [ShopController::class, 'index'])->name('home');
+Route::get('/shop', [ShopController::class, 'shop'])->name('shop');
+Route::get('/product/{slug}', [ShopController::class, 'product'])->name('product');
+Route::get('/cart', [ShopController::class, 'cart'])->name('cart');
+Route::get('/checkout', [ShopController::class, 'checkout'])->name('checkout');
+Route::get('/checkout/success', [ShopController::class, 'checkoutSuccess'])->name('checkout.success');
+Route::get('/categories', [ShopController::class, 'categories'])->name('categories');
+Route::get('/orders/{orderNumber}', [ShopOrderController::class, 'show'])->name('orders.show');
 
-        // Notification routes
-        Route::get('/notifications', [NotificationController::class, 'index']);
-        Route::get('/notifications/unread', [NotificationController::class, 'unread']);
-        Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
-        Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
-    });
+// User routes (authenticated)
+Route::middleware('auth')->group(function () {
+    Route::get('/orders', [ShopOrderController::class, 'index'])->name('orders.index');
+    Route::get('/addresses', [AddressController::class, 'index'])->name('addresses.index');
+    Route::post('/addresses', [AddressController::class, 'store'])->name('addresses.store');
+    Route::put('/addresses/{id}', [AddressController::class, 'update'])->name('addresses.update');
+    Route::delete('/addresses/{id}', [AddressController::class, 'destroy'])->name('addresses.destroy');
+    Route::get('/wishlist', [ShopController::class, 'wishlist'])->name('wishlist');
 
-    // API Cart routes (session-based)
-    Route::prefix('api')->group(function () {
-        Route::get('cart', [CartController::class, 'index']);
-        Route::post('cart/add', [CartController::class, 'add']);
-        Route::delete('cart/clear', [CartController::class, 'clear']);
-        Route::post('cart/coupon', [CartController::class, 'applyCoupon']);
-        Route::delete('cart/coupon', [CartController::class, 'removeCoupon']);
-        Route::patch('cart/{id}', [CartController::class, 'update']);
-        Route::delete('cart/{id}', [CartController::class, 'remove']);
-        Route::post('orders', [ApiOrderController::class, 'store']);
-        Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
+    // Notification routes
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread', [NotificationController::class, 'unread']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+});
 
-        // Public: anyone can view approved reviews
-        Route::get('products/{product}/reviews', [ProductReviewController::class, 'index']);
-    });
+// API Cart routes (session-based)
+Route::prefix('api')->group(function () {
+    Route::get('cart', [CartController::class, 'index']);
+    Route::post('cart/add', [CartController::class, 'add']);
+    Route::delete('cart/clear', [CartController::class, 'clear']);
+    Route::post('cart/coupon', [CartController::class, 'applyCoupon']);
+    Route::delete('cart/coupon', [CartController::class, 'removeCoupon']);
+    Route::patch('cart/{id}', [CartController::class, 'update']);
+    Route::delete('cart/{id}', [CartController::class, 'remove']);
+    Route::post('newsletter/subscribe', [NewsletterController::class, 'subscribe']);
+    Route::post('newsletter/unsubscribe', [NewsletterController::class, 'unsubscribe']);
+    Route::post('orders', [ApiOrderController::class, 'store'])->middleware('throttle:checkout');
+    Route::get('orders/{orderNumber}', [ApiOrderController::class, 'show']);
 
-    // API Product Reviews (authenticated)
-    Route::middleware('auth')->prefix('api')->group(function () {
-        Route::post('products/{product}/reviews', [ProductReviewController::class, 'store']);
-        Route::put('products/{product}/reviews/{review}', [ProductReviewController::class, 'update']);
-        Route::delete('products/{product}/reviews/{review}', [ProductReviewController::class, 'destroy']);
-    });
+    // Payment routes (session auth via web middleware)
+    Route::post('payments/create-session', [PaymentController::class, 'createCheckoutSession'])->middleware('auth');
+    Route::post('payments/{order}/retry', [PaymentController::class, 'retryPayment'])->middleware('auth');
+    Route::get('payments/success', [PaymentController::class, 'confirmSuccess'])->middleware('auth');
+    Route::get('payments/paypal/capture', [PaymentController::class, 'handlePayPalCapture'])->name('paypal.capture')->middleware('auth');
+    Route::get('payments/paypal/cancel', [PaymentController::class, 'handlePayPalCancel'])->name('paypal.cancel')->middleware('auth');
 
-    // API Wishlist routes (authenticated)
-    Route::middleware('auth')->prefix('api')->group(function () {
-        Route::get('wishlist', [WishlistController::class, 'index']);
-        Route::post('wishlist/add', [WishlistController::class, 'add']);
-        Route::delete('wishlist/{id}', [WishlistController::class, 'remove']);
-        Route::delete('wishlist', [WishlistController::class, 'clear']);
-    });
+    // Public: anyone can view approved reviews
+    Route::get('products/{product}/reviews', [ProductReviewController::class, 'index']);
+});
 
-    // Auth routes
-    Route::get('/login', fn () => Inertia::render('Auth/Login'))->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/register', fn () => Inertia::render('Auth/Register'))->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+// API Product Reviews (authenticated)
+Route::middleware('auth')->prefix('api')->group(function () {
+    Route::post('products/{product}/reviews', [ProductReviewController::class, 'store']);
+    Route::put('products/{product}/reviews/{review}', [ProductReviewController::class, 'update']);
+    Route::delete('products/{product}/reviews/{review}', [ProductReviewController::class, 'destroy']);
+});
 
-    // Password Reset
-    Route::middleware('guest')->group(function () {
-        Route::get('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->name('password.request');
-        Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
-        Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetPasswordForm'])->name('password.reset.form');
-        Route::post('/reset-password', [PasswordResetController::class, 'updatePassword'])->name('password.update');
-    });
+// API Wishlist routes (authenticated)
+Route::middleware('auth')->prefix('api')->group(function () {
+    Route::get('wishlist', [WishlistController::class, 'index']);
+    Route::post('wishlist/add', [WishlistController::class, 'add']);
+    Route::delete('wishlist/{id}', [WishlistController::class, 'remove']);
+    Route::delete('wishlist', [WishlistController::class, 'clear']);
+});
 
-    // Email Verification
-    Route::middleware('auth')->group(function () {
-        Route::get('/email/verify', [VerificationController::class, 'showNotice'])->name('verification.notice');
-        Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
-        Route::post('/email/resend', [VerificationController::class, 'resend'])->name('verification.resend');
-    });
+// Auth routes
+Route::get('/login', fn () => Inertia::render('Auth/Login'))->name('login');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
+Route::get('/register', fn () => Inertia::render('Auth/Register'))->name('register');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Password Reset
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email')->middleware('throttle:password-reset');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'resetPasswordForm'])->name('password.reset.form');
+    Route::post('/reset-password', [PasswordResetController::class, 'updatePassword'])->name('password.update')->middleware('throttle:password-reset');
+});
+
+// Email Verification
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verify', [VerificationController::class, 'showNotice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])->middleware('signed')->name('verification.verify');
+    Route::post('/email/resend', [VerificationController::class, 'resend'])->name('verification.resend');
 });

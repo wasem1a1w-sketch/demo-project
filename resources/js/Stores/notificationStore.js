@@ -51,17 +51,16 @@ export const useNotificationStore = defineStore('notifications', () => {
 
         window.Pusher = Pusher;
 
-        Pusher.Runtime.getProtocol = function () { return 'http:'; };
-
         console.log('[Notifications] Initializing Echo...', { userId, isAdmin });
 
+        const isSecure = window.location.protocol === 'https:';
         echo.value = new Echo({
             broadcaster: 'reverb',
             key: import.meta.env.VITE_REVERB_APP_KEY,
-            wsHost: '127.0.0.1',
-            wsPort: 8081,
-            forceTLS: false,
-            encrypted: false,
+            wsHost: window.location.hostname,
+            wsPort: isSecure ? 443 : 80,
+            forceTLS: isSecure,
+            encrypted: isSecure,
             disableStats: true,
         });
 

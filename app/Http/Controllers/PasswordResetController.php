@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Models\UserActivityLog;
 use App\Notifications\SendPasswordResetLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
@@ -29,6 +31,11 @@ class PasswordResetController extends Controller
         );
 
         if ($status === Password::RESET_LINK_SENT) {
+            $user = User::where('email', $request->email)->first();
+            if ($user) {
+                UserActivityLog::record($user->id, 'password_reset_requested', "Password reset requested for: {$request->email}");
+            }
+
             return back()->with('success', 'We have emailed your password reset link!');
         }
 
@@ -63,6 +70,11 @@ class PasswordResetController extends Controller
         );
 
         if ($status === Password::PASSWORD_RESET) {
+            $user = User::where('email', $request->email)->first();
+            if ($user) {
+                UserActivityLog::record($user->id, 'password_reset_completed', "Password reset completed for: {$request->email}");
+            }
+
             return redirect()->route('login')->with('success', 'Your password has been reset! Please sign in.');
         }
 

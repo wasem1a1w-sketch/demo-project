@@ -1,5 +1,12 @@
-demo-project {
+{
+    http_port 8089
+}
+
+https://myproject:8443 {
     bind 127.0.0.1
     tls internal
-    reverse_proxy localhost:8000
+    root * /var/www/html/myproject/public
+    encode gzip zstd
+    php_fastcgi unix///run/php-fpm/www.sock
+    file_server
 }

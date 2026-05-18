@@ -14,6 +14,8 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libssl-dev \
+    libmagickwand-dev \
+    libwebp-dev \
     && docker-php-ext-install \
         pdo_mysql \
         mbstring \
@@ -23,6 +25,8 @@ RUN apt-get update && apt-get install -y \
         pcntl \
         sockets \
         opcache \
+    && pecl install imagick \
+    && docker-php-ext-enable imagick \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -60,7 +64,7 @@ RUN cp .env.example .env \
     && php artisan route:cache \
     && npm run build \
     && ls -la public/build/ \
-    && mkdir -p /app/public/uploads \
+    && mkdir -p /app/public/uploads/original /app/public/uploads/thumbnails /app/public/uploads/icons \
     && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
 # Expose ports (FrankenPHP + Reverb)

@@ -1,13 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Middleware\AdminOnly;
 use Illuminate\Support\Facades\Route;
@@ -22,6 +25,8 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
         ->can('products.create');
     Route::post('/admin/products', [AdminProductController::class, 'store'])->name('admin.products.store')
         ->can('products.create');
+    Route::get('/admin/products/{id}', [AdminProductController::class, 'show'])->name('admin.products.show')
+        ->can('products.read');
     Route::get('/admin/products/{id}/edit', [AdminProductController::class, 'edit'])->name('admin.products.edit')
         ->can('products.update');
     Route::post('/admin/products/{id}', [AdminProductController::class, 'update'])->name('admin.products.update')
@@ -47,6 +52,20 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
     Route::delete('/admin/categories/{id}', [AdminCategoryController::class, 'destroy'])->name('admin.categories.destroy')
         ->can('categories.delete');
 
+    // Coupon routes
+    Route::get('/admin/coupons', [CouponController::class, 'index'])->name('admin.coupons')
+        ->can('coupons.read');
+    Route::get('/admin/coupons/create', [CouponController::class, 'create'])->name('admin.coupons.create')
+        ->can('coupons.create');
+    Route::post('/admin/coupons', [CouponController::class, 'store'])->name('admin.coupons.store')
+        ->can('coupons.create');
+    Route::get('/admin/coupons/{coupon}/edit', [CouponController::class, 'edit'])->name('admin.coupons.edit')
+        ->can('coupons.update');
+    Route::post('/admin/coupons/{coupon}', [CouponController::class, 'update'])->name('admin.coupons.update')
+        ->can('coupons.update');
+    Route::delete('/admin/coupons/{coupon}', [CouponController::class, 'destroy'])->name('admin.coupons.destroy')
+        ->can('coupons.delete');
+
     Route::get('/admin/users/roles/create', [RoleController::class, 'create'])->name('admin.users.roles.create')
         ->can('roles.create');
     Route::post('/admin/users/roles', [RoleController::class, 'store'])->name('admin.users.roles.store')
@@ -62,6 +81,8 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
         ->can('users.read');
     Route::get('/admin/users/create', [UserController::class, 'create'])->name('admin.users.create')
         ->can('users.create');
+    Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show')
+        ->can('users.read');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store')
         ->can('users.create');
     Route::get('/admin/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit')
@@ -86,4 +107,19 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
     Route::get('/admin/notifications/unread', [AdminNotificationController::class, 'unread']);
     Route::patch('/admin/notifications/{id}/read', [AdminNotificationController::class, 'markAsRead']);
     Route::patch('/admin/notifications/read-all', [AdminNotificationController::class, 'markAllRead']);
+
+    // Activity Logs
+    Route::get('/admin/activity-logs', [ActivityLogController::class, 'index'])
+        ->name('admin.activity-logs')
+        ->can('activity-logs.read');
+    Route::get('/admin/activity-logs/data', [ActivityLogController::class, 'getLogs'])
+        ->can('activity-logs.read');
+
+    // Settings
+    Route::get('/admin/settings', [AdminSettingsController::class, 'index'])
+        ->name('admin.settings')
+        ->can('settings.read');
+    Route::put('/admin/settings', [AdminSettingsController::class, 'update'])
+        ->name('admin.settings.update')
+        ->can('settings.update');
 });

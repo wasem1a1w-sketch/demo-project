@@ -37,34 +37,106 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 |-------|-----------|
 | Backend | Laravel 13 |
 | Frontend | Vue 3 (Composition API) |
-| Bridge | Inertia.js |
-| Database | MySQL |
+| Bridge | Inertia.js v3 |
+| State Management | Pinia |
+| Database | MySQL 8.0 |
+| WebSockets | Laravel Reverb |
 | Server | FrankenPHP (Caddy) |
 | Containerization | Docker |
 | Hosting | Railway |
 | Build | Vite |
+| CSS | Tailwind CSS v4 |
+| Charts | ApexCharts |
+| RBAC | Spatie Laravel Permission |
+| Image Processing | Imagick (WebP) |
 
 ---
 
 ## Features
 
-- **Product Reviews & Ratings** — customers leave reviews with star ratings; admin approval workflow; edit/delete own reviews; average rating displayed on product cards, detail page, and wishlist; admin notification on new review
-- **Authentication** — user registration, login, logout, password reset, email verification
-- **Password Reset** — forgot/reset password flow with email notification
-- **Email Verification** — verify email addresses after registration; unverified users see a notice page with resend option
-- **Wishlist** — save/favorite products for later; heart toggle on product cards, detail page, and dedicated wishlist page
-- **Product Management** — create, edit, delete products with image uploads (main image + gallery, max 5)
-- **Category Management** — organize products by category
-- **Shopping Cart** — add/remove items, apply coupons, real-time totals
-- **Checkout** — saved addresses, shipping info, payment method selection
-- **Order Management** — place orders, view order history, admin status updates
-- **Stock Tracking** — automatic stock decrement on order, restore on cancellation
-- **Role-Based Access Control** — Spatie Laravel Permission with granular permissions per module (create, read, update, delete)
-- **Admin Dashboard** — manage products, orders, users, categories, roles
-- **User Management** — list, create, edit users with single role assignment; filter by client/non-client
-- **Role & Permission Management** — create/edit roles with grouped permission matrix UI; system roles (admin/client) are locked
-- **Image Gallery** — separate main product image and gallery uploads, 3MB limit per image
-- **Responsive Design** — mobile-friendly layout via Tailwind CSS
+### Storefront (Public)
+
+- **Homepage** — featured products grid, top-level categories with product counts
+- **Shop / Product Listing** — paginated grid (12/page), filter by category/search/featured, sort by newest/price/name, average rating per product
+- **Product Autocomplete** — AJAX search-as-you-type (up to 7 results: name, slug, price, category, icon)
+- **Product Detail** — full product info, images, average rating, review count
+- **Category Listing** — hierarchical categories (parent/children), ordered by sort, active-only
+- **Shopping Cart** — session-based (guest-friendly), add/update/remove/clear, stock validation, coupon application, real-time pricing (subtotal, discount, tax, shipping, total), free shipping threshold
+- **Checkout** — shipping address form, payment method selection (Stripe, PayPal, Offline), server-side recalculated totals
+- **Checkout Success** — order confirmation page after successful placement
+- **Newsletter Subscription** — subscribe/unsubscribe email via AJAX
+- **Contact Page** — contact form (name, email, message) stored in database
+
+### Customer Account (Authenticated)
+
+- **Order History** — paginated list of own orders with items
+- **Order Detail** — view single order by order number, includes items, product images, payment history
+- **Address Book** — CRUD shipping/billing addresses, default address toggle (one per type per user)
+- **Wishlist** — add/remove products, toggle from product page, clear all, database-backed persistence
+- **Product Reviews** — create review with rating (1-5), optional title/body; one review per product per user; edit/delete own; admin approval required
+- **Payment Processing** — Stripe Checkout Sessions, PayPal Orders API (create + capture), payment retry (max 3 attempts), status tracking (pending/paid/failed/refunded/expired)
+- **Notification Center** — paginated notification list, unread count, mark read/all read, real-time WebSocket via Laravel Echo + Reverb
+
+### Admin Panel
+
+- **Dashboard** — stats (products, orders, revenue), 7-day charts (ApexCharts), recent orders table, permission-gated visibility
+- **Product Management** — CRUD with image upload; auto WebP conversion via Imagick, 3 generated sizes (1920px, 400x400, 100x100); stock/sku/weight/category/featured toggles
+- **Order Management** — list/filter by status, view detail, update status (pending→processing→shipped→delivered→cancelled), update payment status; cancellation auto-restocks items + notifies user
+- **Category Management** — CRUD with parent hierarchy, active/sort order controls, product count
+- **Coupon Management** — CRUD with type (percentage/fixed), value, min/max amounts, usage limits, date ranges, unique code validation
+- **User Management** — CRUD with role assignment, role filtering, pagination
+- **Role & Permission Management** — create/edit roles with grouped permission matrix (30+ permissions), system roles (admin/client) locked
+- **Review Moderation** — list all reviews, approve/reject/delete with real-time user notification
+- **Settings Management** — manage shipping rate, free shipping threshold, tax rate, Stripe/PayPal credentials
+- **Activity Log Viewer** — filterable audit trail (25+ event types, date range, paginated 50/page)
+- **Admin Notification Center** — separate system from user notifications, real-time via Reverb on private admin channel
+
+### Platform-wide
+
+- **Authentication** — registration, login, logout, email verification (MustVerifyEmail), password reset
+- **Rate Limiting** — per-endpoint: API (60/min), login (5/min), register (3/min), password reset (3/min), checkout (10/min)
+- **Role-Based Access Control** — Spatie Laravel Permission with 30+ granular permissions per module
+- **Stock Tracking** — auto decrement on order placement, restore on cancellation/failure
+- **Activity Logging** — 25+ event types across all features (user_id, type, description, IP, user agent)
+- **Image Processing** — Imagick WebP conversion, 3 sizes (original 1920px max, thumbnail 400x400, icon 100x100), 3MB limit
+- **Responsive Design** — mobile-friendly via Tailwind CSS
+- **Theme Support** — dark/light mode toggle, system preference detection, localStorage persistence
+
+### Payment Gateways
+
+| Provider | Method | Mock Mode | Features |
+|----------|--------|-----------|----------|
+| **Stripe** | Checkout Sessions (card) | Yes (fake session ID/URL) | Webhook handling (`checkout.session.completed`, `payment_intent.payment_failed`), session retrieval |
+| **PayPal** | Orders API v2 (capture intent) | Yes (fake COMPLETED capture) | OAuth2 token, order create/capture, return/cancel URL handling |
+| **Offline** | Manual confirmation | N/A | No processing — admin confirms payment manually |
+
+All payment credentials configurable via admin Settings page (stored in DB) or `.env` / `config/services.php`.
+
+### Frontend Architecture
+
+| Layer | Technology |
+|-------|-----------|
+| SPA Engine | Vue 3 (Composition API) + Inertia.js v3 |
+| State Management | Pinia (5 stores: cart, wishlist, notifications, theme, reviews) |
+| WebSocket Client | Laravel Echo + Pusher JS |
+| Charts | ApexCharts (vue3-apexcharts) |
+| CSS | Tailwind CSS v4 (class-based dark mode) |
+| HTTP | Axios (CSRF token bound globally) |
+| Routes (JS) | Ziggy — Laravel route names available as `route()` in Vue |
+
+**Reusable Components:** LazyImage, Dropdown, Pagination, ConfirmModal, StarRating, ProductReviews, NotificationBell, Notifications, ThemeToggle, Link
+
+**Composables:** `usePermission` (permission check from Inertia shared props), `useNotification` (ephemeral toast notifications with auto-dismiss)
+
+### Security
+
+- CSRF protection (token in meta tag, Axios default)
+- Role/permission gates on every admin route (`AdminOnly` middleware + Spatie gates)
+- Rate limiting on auth/checkout endpoints
+- Email verification enforced for sensitive operations
+- Session-based authentication with Sanctum
+- Trusted proxy config for production (AWS ELB compatible)
+- Protected system roles (admin/client) cannot be edited/deleted
 
 > **Default admin account:** `admin@admin.com` / `password` (has full permissions)
 > **Registration assigns** the `client` role (no admin permissions by default)
@@ -229,6 +301,15 @@ The Docker setup uses **FrankenPHP** — a modern PHP application server built o
 | `APP_URL` | Application URL | — |
 | `DB_CONNECTION` | Database driver | `mysql` |
 | `DB_DATABASE` | Database name | `myproject` |
+| `BROADCAST_CONNECTION` | Broadcast driver | `reverb` |
+| `QUEUE_CONNECTION` | Queue driver | `sync` |
+| `REVERB_APP_ID` | Reverb app ID | — |
+| `REVERB_APP_KEY` | Reverb app key | — |
+| `REVERB_APP_SECRET` | Reverb app secret | — |
+| `STRIPE_KEY` | Stripe publishable key | — |
+| `STRIPE_SECRET` | Stripe secret key | — |
+| `PAYPAL_CLIENT_ID` | PayPal client ID | — |
+| `PAYPAL_SECRET` | PayPal secret | — |
 
 ---
 

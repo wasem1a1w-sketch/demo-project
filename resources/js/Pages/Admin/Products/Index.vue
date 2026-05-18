@@ -24,7 +24,7 @@
                 <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     <tr v-for="product in products.data" :key="product.id">
                         <td class="px-6 py-4">
-                            <img v-if="product.images?.length" :src="`/${product.images[0].image_path}`" class="w-12 h-12 rounded object-contain">
+                            <LazyImage v-if="product.images?.length" :src="`/${product.images[0].icon_path || product.images[0].image_path}`" img-class="rounded object-contain" />
                             <div v-else class="w-12 h-12 rounded bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                                 <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                             </div>
@@ -51,7 +51,8 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <Link v-if="can('products.update')" :href="route('admin.products.edit', { id: product.id })" class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-3">Edit</Link>
+                            <Link :href="route('admin.products.show', { id: product.id })" class="inline-flex items-center px-3 py-1 bg-gray-600 dark:bg-gray-500 border border-transparent rounded-md font-semibold text-xs text-white mr-2 hover:bg-gray-500">View</Link>
+                            <Link v-if="can('products.update')" :href="route('admin.products.edit', { id: product.id })" class="inline-flex items-center px-3 py-1 bg-indigo-600 dark:bg-indigo-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-indigo-100 hover:bg-indigo-500 dark:hover:bg-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 mr-2">Edit</Link>
                             <button v-if="can('products.delete')" @click="deleteProduct(product.id)" class="inline-flex items-center px-3 py-1 bg-red-600 dark:bg-red-500 border border-transparent rounded-md font-semibold text-xs text-white dark:text-red-100 hover:bg-red-500 dark:hover:bg-red-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">Delete</button>
                         </td>
                     </tr>
@@ -79,6 +80,7 @@ import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import { usePermission } from '../../../composables/usePermission';
 import ConfirmModal from '../../../components/ConfirmModal.vue';
+import LazyImage from '../../../components/LazyImage.vue';
 
 const { can } = usePermission();
 const showDeleteModal = ref(false);
