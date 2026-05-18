@@ -139,10 +139,6 @@ class PaymentController extends Controller
         $order = $payment->order;
         $order->update(['payment_status' => 'paid']);
 
-        foreach ($order->items as $item) {
-            $item->product?->decrement('stock', $item->quantity);
-        }
-
         if ($order->user) {
             $order->user->notify(new OrderConfirmation($order));
         }
@@ -160,10 +156,7 @@ class PaymentController extends Controller
         if ($payment && !$payment->isFailed()) {
             $payment->update(['status' => Payment::STATUS_FAILED]);
             $payment->order->update(['payment_status' => 'failed']);
-
-            foreach ($payment->order->items as $item) {
-                $item->product?->increment('stock', $item->quantity);
-            }
+            $payment->order->cancel();
         }
     }
 
@@ -245,12 +238,6 @@ class PaymentController extends Controller
         ]);
         $payment->order->update(['payment_status' => 'paid']);
 
-        foreach ($payment->order->items as $item) {
-            if ($item->product && $item->product->stock >= $item->quantity) {
-                $item->product->decrement('stock', $item->quantity);
-            }
-        }
-
         if ($payment->order->user) {
             $payment->order->user->notify(new OrderConfirmation($payment->order));
         }
@@ -260,5 +247,81 @@ class PaymentController extends Controller
             'payment' => $payment,
             'message' => 'Payment successful',
         ]);
+    }
+
+    public function handlePayPalCapture(Request $request)
+    {
+        $user = Auth::user();
+        $token = $request->query('token');
+
+        if (!$token) {
+            return response()->json(['error' => 'Missing PayPal token'], 400);
+        }
+
+        $payment = Payment::with('order.items.product')
+            ->where('provider_session_id', $token)
+            ->whereHas('order', fn($q) => $q->where('user_id', $user->id))
+            ->first();
+
+        if (!$payment) {
+            return response()->json(['error' => 'Payment not found'], 404);
+        }
+
+        if ($payment->isPaid()) {
+            return redirect()->route('checkout.success');
+        }
+
+        try {
+            $captureData = $this->paymentService->capturePayPalOrder($request);
+        } catch (\Exception $e) {
+            $payment->update(['status' => Payment::STATUS_FAILED]);
+            $payment->order->update(['payment_status' => 'failed']);
+            return response()->json(['error' => $e->getMessage()], 502);
+        }
+
+        $status = $captureData['status'] ?? '';
+
+        if ($status === 'COMPLETED') {
+            $captureId = $captureData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
+
+            $payment->update([
+                'status' => Payment::STATUS_PAID,
+                'provider_transaction_id' => $captureId,
+                'provider_response' => $captureData,
+            ]);
+            $payment->order->update(['payment_status' => 'paid']);
+
+            if ($payment->order->user) {
+                $payment->order->user->notify(new OrderConfirmation($payment->order));
+            }
+
+            return redirect()->route('checkout.success');
+        }
+
+        $payment->update([
+            'status' => Payment::STATUS_FAILED,
+            'provider_response' => $captureData,
+        ]);
+        $payment->order->update(['payment_status' => 'failed']);
+
+        return response()->json(['error' => 'PayPal payment not completed'], 400);
+    }
+
+    public function handlePayPalCancel(Request $request)
+    {
+        $token = $request->query('token');
+
+        if ($token) {
+            $payment = Payment::with('order.items.product')
+                ->where('provider_session_id', $token)
+                ->first();
+
+            if ($payment && !$payment->isPaid()) {
+                $payment->update(['status' => Payment::STATUS_EXPIRED]);
+                $payment->order->cancel();
+            }
+        }
+
+        return redirect()->route('checkout');
     }
 }

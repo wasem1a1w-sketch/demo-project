@@ -70,6 +70,8 @@ Route::prefix('api')->group(function () {
     Route::post('payments/create-session', [PaymentController::class, 'createCheckoutSession'])->middleware('auth');
     Route::post('payments/{order}/retry', [PaymentController::class, 'retryPayment'])->middleware('auth');
     Route::get('payments/success', [PaymentController::class, 'confirmSuccess'])->middleware('auth');
+    Route::get('payments/paypal/capture', [PaymentController::class, 'handlePayPalCapture'])->name('paypal.capture')->middleware('auth');
+    Route::get('payments/paypal/cancel', [PaymentController::class, 'handlePayPalCancel'])->name('paypal.cancel')->middleware('auth');
 
     // Public: anyone can view approved reviews
     Route::get('products/{product}/reviews', [ProductReviewController::class, 'index']);

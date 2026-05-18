@@ -78,6 +78,17 @@ class Order extends Model
         return 'ORD-'.strtoupper(uniqid()).random_int(1000, 9999);
     }
 
+    public function cancel(): void
+    {
+        $this->loadMissing('items.product');
+
+        foreach ($this->items as $item) {
+            $item->product?->increment('stock', $item->quantity);
+        }
+
+        $this->update(['status' => self::STATUS_CANCELLED]);
+    }
+
     public function getStatusColorAttribute()
     {
         return match ($this->status) {
