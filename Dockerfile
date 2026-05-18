@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y \
         pcntl \
         sockets \
         opcache \
+        bcmath \
     && pecl install imagick \
     && docker-php-ext-enable imagick \
     && apt-get clean \
