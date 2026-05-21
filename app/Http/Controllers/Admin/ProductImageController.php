@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\ProductImage;
 use App\Models\UserActivityLog;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Redirect;
 
 class ProductImageController extends Controller
 {

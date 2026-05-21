@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddressRequest;
 use App\Models\Address;
 use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
@@ -21,23 +22,9 @@ class AddressController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(AddressRequest $request)
     {
-        $validated = $request->validate([
-            'type' => ['required', 'in:shipping,billing'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'company' => ['nullable', 'string', 'max:255'],
-            'address1' => ['required', 'string', 'max:500'],
-            'address2' => ['nullable', 'string', 'max:500'],
-            'city' => ['required', 'string', 'max:255'],
-            'state' => ['required', 'string', 'max:255'],
-            'postal_code' => ['required', 'string', 'max:20'],
-            'country' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:30'],
-            'is_default' => ['boolean'],
-        ]);
-
+        $validated = $request->validated();
         $validated['user_id'] = auth()->id();
 
         if (!empty($validated['is_default'])) {
@@ -51,27 +38,16 @@ class AddressController extends Controller
         return back();
     }
 
-    public function update(Request $request, $id)
+    public function update(AddressRequest $request, $id)
     {
         $address = auth()->user()->addresses()->findOrFail($id);
-
-        $validated = $request->validate([
-            'type' => ['required', 'in:shipping,billing'],
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name' => ['required', 'string', 'max:255'],
-            'company' => ['nullable', 'string', 'max:255'],
-            'address1' => ['required', 'string', 'max:500'],
-            'address2' => ['nullable', 'string', 'max:500'],
-            'city' => ['required', 'string', 'max:255'],
-            'state' => ['required', 'string', 'max:255'],
-            'postal_code' => ['required', 'string', 'max:20'],
-            'country' => ['required', 'string', 'max:255'],
-            'phone' => ['required', 'string', 'max:30'],
-            'is_default' => ['boolean'],
-        ]);
+        $validated = $request->validated();
 
         if (!empty($validated['is_default'])) {
-            auth()->user()->addresses()->where('type', $validated['type'])->where('id', '!=', $id)->update(['is_default' => false]);
+            auth()->user()->addresses()
+                ->where('type', $validated['type'])
+                ->where('id', '!=', $id)
+                ->update(['is_default' => false]);
         }
 
         $address->update($validated);

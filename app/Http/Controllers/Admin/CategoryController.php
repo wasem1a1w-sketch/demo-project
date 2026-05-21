@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CategoryRequest;
 use App\Models\Category;
 use App\Models\UserActivityLog;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class CategoryController extends Controller
@@ -19,38 +19,19 @@ class CategoryController extends Controller
         return Inertia::render('Admin/Categories/Index', ['categories' => $categories]);
     }
 
-    public function store(Request $request)
+    public function store(CategoryRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:categories',
-            'description' => 'nullable',
-            'parent_id' => 'nullable|exists:categories,id',
-            'is_active' => 'boolean',
-            'order' => 'integer|min:0',
-        ]);
-
-        $category = Category::create($validated);
+        $category = Category::create($request->validated());
 
         UserActivityLog::record(auth()->id(), 'category_created', "Category created: {$category->name}");
 
         return back();
     }
 
-    public function update(Request $request, $id)
+    public function update(CategoryRequest $request, $id)
     {
         $category = Category::findOrFail($id);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:categories,slug,'.$id,
-            'description' => 'nullable',
-            'parent_id' => 'nullable|exists:categories,id',
-            'is_active' => 'boolean',
-            'order' => 'integer|min:0',
-        ]);
-
-        $category->update($validated);
+        $category->update($request->validated());
 
         UserActivityLog::record(auth()->id(), 'category_updated', "Category updated: {$category->name}");
 

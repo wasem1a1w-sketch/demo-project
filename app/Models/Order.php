@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Order extends Model
 {
@@ -73,9 +74,13 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
-    public static function generateOrderNumber()
+    public static function generateOrderNumber(): string
     {
-        return 'ORD-'.strtoupper(uniqid()).random_int(1000, 9999);
+        do {
+            $number = 'ORD-' . strtoupper(Str::random(8)) . random_int(1000, 9999);
+        } while (static::where('order_number', $number)->exists());
+
+        return $number;
     }
 
     public function cancel(): void

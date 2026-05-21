@@ -50,7 +50,7 @@ class AdminController extends Controller
         $revenueChartSeries = $period->map(fn ($date) => round($revenueByDay[$date] ?? 0, 2))->all();
 
         $recentOrders = $user->can('orders.read')
-            ? Order::orderByDesc('id')->limit(10)->get()
+            ? Order::with('user:id,name')->orderByDesc('id')->limit(10)->get()
             : [];
 
         return Inertia::render('Admin/Dashboard', [

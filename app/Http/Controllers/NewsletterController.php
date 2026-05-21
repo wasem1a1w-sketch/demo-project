@@ -2,17 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\NewsletterRequest;
 use App\Models\Subscriber;
 use App\Models\UserActivityLog;
-use Illuminate\Http\Request;
 
 class NewsletterController extends Controller
 {
-    public function subscribe(Request $request)
+    public function subscribe(NewsletterRequest $request)
     {
-        $validated = $request->validate([
-            'email' => 'required|email|max:255',
-        ]);
+        $validated = $request->validated();
 
         Subscriber::firstOrCreate(['email' => $validated['email']]);
 
@@ -21,11 +19,9 @@ class NewsletterController extends Controller
         return response()->json(['message' => 'Subscribed successfully.']);
     }
 
-    public function unsubscribe(Request $request)
+    public function unsubscribe(NewsletterRequest $request)
     {
-        $validated = $request->validate([
-            'email' => 'required|email|max:255',
-        ]);
+        $validated = $request->validated();
 
         Subscriber::where('email', $validated['email'])->delete();
 
