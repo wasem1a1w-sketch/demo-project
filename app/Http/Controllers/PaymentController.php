@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PaymentRequest;
 use App\Models\Order;
 use App\Models\Payment;
-use App\Notifications\OrderConfirmation;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,14 +15,9 @@ class PaymentController extends Controller
         protected PaymentService $paymentService
     ) {}
 
-    public function createCheckoutSession(Request $request)
+    public function createCheckoutSession(PaymentRequest $request)
     {
         $user = Auth::user();
-
-        $request->validate([
-            'order_id' => 'required|integer|exists:orders,id',
-        ]);
-
         $order = Order::with('items.product')->findOrFail($request->order_id);
 
         if ($order->user_id !== $user->id) {
@@ -36,19 +31,11 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        $existingPaidPayment = Payment::where('order_id', $order->id)
-            ->where('status', Payment::STATUS_PAID)
-            ->exists();
-
-        if ($existingPaidPayment || $order->payment_status === 'paid') {
+        if ($this->paymentService->isOrderAlreadyPaid($order)) {
             return response()->json(['error' => 'Order already paid'], 400);
         }
 
-        $existingExpiredPayment = Payment::where('order_id', $order->id)
-            ->where('status', Payment::STATUS_EXPIRED)
-            ->exists();
-
-        if ($existingExpiredPayment || $order->payment_status === 'expired') {
+        if ($this->paymentService->isOrderExpired($order)) {
             return response()->json(['error' => 'Order payment expired'], 400);
         }
 
@@ -60,50 +47,23 @@ class PaymentController extends Controller
             ], 422);
         }
 
-        foreach ($order->items as $item) {
-            if ($item->product && $item->product->stock < $item->quantity) {
-                return response()->json([
-                    'error' => 'Validation failed',
-                    'errors' => ['stock' => ["Insufficient stock for {$item->product->name}"]],
-                ], 422);
-            }
-        }
-
-        $existingPending = Payment::where('order_id', $order->id)
-            ->where('status', Payment::STATUS_PENDING)
-            ->first();
-
-        if ($existingPending) {
-            $existingPending->update(['status' => Payment::STATUS_EXPIRED]);
+        $stockError = $this->paymentService->validateItemStock($order);
+        if ($stockError) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'errors' => ['stock' => [$stockError]],
+            ], 422);
         }
 
         $provider = $order->payment_method ?: 'stripe';
 
-        $payment = Payment::create([
-            'order_id' => $order->id,
-            'provider' => $provider,
-            'status' => Payment::STATUS_PENDING,
-            'attempts' => 0,
-        ]);
-
-        $order->update(['payment_status' => 'pending']);
-
         try {
-            $sessionData = $provider === 'paypal'
-                ? $this->paymentService->createPayPalOrder($order)
-                : $this->paymentService->createStripeSession($order);
+            $payment = $this->paymentService->processCheckout($order, $provider);
+
+            return response()->json($payment->provider_response);
         } catch (\RuntimeException $e) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $order->update(['payment_status' => 'failed']);
             return response()->json(['error' => $e->getMessage()], 502);
         }
-
-        $payment->update([
-            'provider_session_id' => $sessionData['session_id'],
-            'provider_response' => $sessionData,
-        ]);
-
-        return response()->json($sessionData);
     }
 
     public function handleWebhook(Request $request)
@@ -116,48 +76,12 @@ class PaymentController extends Controller
         $eventData = $request->json('data.object');
 
         if ($event === 'checkout.session.completed') {
-            $this->handleCheckoutComplete($eventData['id'] ?? '');
+            $this->paymentService->handleCheckoutComplete($eventData['id'] ?? '');
         } elseif ($event === 'payment_intent.payment_failed') {
-            $this->handlePaymentFailed($eventData['id'] ?? '');
+            $this->paymentService->handlePaymentFailed($eventData['id'] ?? '');
         }
 
         return response()->json(['success' => true]);
-    }
-
-    protected function handleCheckoutComplete($sessionId)
-    {
-        $payment = Payment::with('order.items.product')
-            ->where('provider_session_id', $sessionId)
-            ->first();
-
-        if (!$payment || $payment->isPaid()) {
-            return;
-        }
-
-        $payment->update(['status' => Payment::STATUS_PAID]);
-
-        $order = $payment->order;
-        $order->update(['payment_status' => 'paid']);
-
-        if ($order->user) {
-            $order->user->notify(new OrderConfirmation($order));
-        }
-    }
-
-    protected function handlePaymentFailed($paymentIntentId)
-    {
-        $payment = Payment::with('order.items.product')
-            ->where(function ($q) use ($paymentIntentId) {
-                $q->where('provider_transaction_id', $paymentIntentId)
-                  ->orWhere('provider_session_id', $paymentIntentId);
-            })
-            ->first();
-
-        if ($payment && !$payment->isFailed()) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $payment->order->update(['payment_status' => 'failed']);
-            $payment->order->cancel();
-        }
     }
 
     public function retryPayment(Request $request, Order $order)
@@ -175,31 +99,21 @@ class PaymentController extends Controller
         }
 
         if ($payment->attempts >= 3) {
-            return response()->json([
-                'error' => 'Maximum retry attempts reached',
-            ], 400);
+            return response()->json(['error' => 'Maximum retry attempts reached'], 400);
         }
-
-        $payment->increment('attempts');
-        $payment->update(['status' => Payment::STATUS_PENDING]);
-        $order->update(['payment_status' => 'pending']);
 
         try {
-            $sessionData = $payment->provider === 'paypal'
-                ? $this->paymentService->createPayPalOrder($order)
-                : $this->paymentService->createStripeSession($order);
+            $sessionData = $this->paymentService->retryPayment($order, $payment, $payment->provider);
+
+            $payment->update([
+                'provider_session_id' => $sessionData['session_id'],
+                'provider_response' => $sessionData,
+            ]);
+
+            return response()->json($sessionData);
         } catch (\RuntimeException $e) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $order->update(['payment_status' => 'failed']);
             return response()->json(['error' => $e->getMessage()], 502);
         }
-
-        $payment->update([
-            'provider_session_id' => $sessionData['session_id'],
-            'provider_response' => $sessionData,
-        ]);
-
-        return response()->json($sessionData);
     }
 
     public function confirmSuccess(Request $request)
@@ -232,15 +146,7 @@ class PaymentController extends Controller
             return response()->json(['error' => 'Payment not completed'], 400);
         }
 
-        $payment->update([
-            'status' => Payment::STATUS_PAID,
-            'provider_response' => $sessionData,
-        ]);
-        $payment->order->update(['payment_status' => 'paid']);
-
-        if ($payment->order->user) {
-            $payment->order->user->notify(new OrderConfirmation($payment->order));
-        }
+        $this->paymentService->confirmPayment($payment, $sessionData);
 
         return response()->json([
             'order' => $payment->order->load('items'),
@@ -279,48 +185,18 @@ class PaymentController extends Controller
             return response()->json(['error' => $e->getMessage()], 502);
         }
 
-        $status = $captureData['status'] ?? '';
+        $this->paymentService->handlePayPalCapture($payment, $captureData);
 
-        if ($status === 'COMPLETED') {
-            $captureId = $captureData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
-
-            $payment->update([
-                'status' => Payment::STATUS_PAID,
-                'provider_transaction_id' => $captureId,
-                'provider_response' => $captureData,
-            ]);
-            $payment->order->update(['payment_status' => 'paid']);
-
-            if ($payment->order->user) {
-                $payment->order->user->notify(new OrderConfirmation($payment->order));
-            }
-
+        if (($captureData['status'] ?? '') === 'COMPLETED') {
             return redirect()->route('checkout.success');
         }
-
-        $payment->update([
-            'status' => Payment::STATUS_FAILED,
-            'provider_response' => $captureData,
-        ]);
-        $payment->order->update(['payment_status' => 'failed']);
 
         return response()->json(['error' => 'PayPal payment not completed'], 400);
     }
 
     public function handlePayPalCancel(Request $request)
     {
-        $token = $request->query('token');
-
-        if ($token) {
-            $payment = Payment::with('order.items.product')
-                ->where('provider_session_id', $token)
-                ->first();
-
-            if ($payment && !$payment->isPaid()) {
-                $payment->update(['status' => Payment::STATUS_EXPIRED]);
-                $payment->order->cancel();
-            }
-        }
+        $this->paymentService->handlePayPalCancel($request->query('token'));
 
         return redirect()->route('checkout');
     }

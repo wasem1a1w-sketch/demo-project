@@ -313,6 +313,36 @@ The Docker setup uses **FrankenPHP** — a modern PHP application server built o
 
 ---
 
+## Refactoring (May 2026)
+
+All controller validation extracted to **21 FormRequest classes** in `app/Http/Requests/`. Store/update requests combined with `unique:table,column,ignore` via route parameter.
+
+### N+1 Query Fixes
+
+| File | Fix |
+|---|---|
+| `Api/CartController` | Preload all products in 1 query instead of 1 per cart item |
+| `Api/WishlistController` | Replaced `avg()`/`count()` per item with `withAvg()`/`withCount()` |
+| `Api/OrderController` | Preload products before transaction loop |
+| `Admin/AdminController` | Added `->with('user')` to recent orders query |
+| `ShopController` | Added `items.product` to order eager loading |
+| `Category` model | Added `loadAncestors()` to avoid N+1 on `path` accessor |
+
+### Service Extraction
+
+- **`app/Services/OrderService.php`** (new) — 170 lines from `Api/OrderController@store`
+- **`app/Services/PaymentService.php`** (refactored) — checkout, retry, confirm, webhook handlers extracted from `PaymentController`
+
+### Other
+
+- `Order::generateOrderNumber()` uses `Str::random(8)` + uniqueness loop (was `uniqid()`)
+- `Admin/OrderController::update()` uses `$order->cancel()` instead of inline stock restoration
+- `Category::loadAncestors()` allows eager loading parent chain for `path` accessor
+
+See [`CHANGELOG.md`](CHANGELOG.md) for full details.
+
+---
+
 ## Author
 
 **Waseem Idries**

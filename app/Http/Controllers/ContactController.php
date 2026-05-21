@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContactRequest;
 use App\Models\ContactMessage;
 use App\Models\UserActivityLog;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ContactController extends Controller
@@ -14,13 +14,9 @@ class ContactController extends Controller
         return Inertia::render('Contact/Index');
     }
 
-    public function store(Request $request)
+    public function store(ContactRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'message' => 'required|string',
-        ]);
+        $validated = $request->validated();
 
         ContactMessage::create($validated);
 

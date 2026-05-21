@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\ReviewRequest;
 use App\Models\AdminNotification;
 use App\Models\Product;
 use App\Models\ProductReview;
@@ -27,14 +28,8 @@ class ProductReviewController extends Controller
         return response()->json($reviews);
     }
 
-    public function store(Request $request, Product $product)
+    public function store(ReviewRequest $request, Product $product)
     {
-        $validated = $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
-            'title' => 'nullable|string|max:255',
-            'body' => 'nullable|string',
-        ]);
-
         $exists = ProductReview::where('user_id', $request->user()->id)
             ->where('product_id', $product->id)
             ->exists();
@@ -45,6 +40,7 @@ class ProductReviewController extends Controller
             ], 422);
         }
 
+        $validated = $request->validated();
         $validated['product_id'] = $product->id;
         $validated['user_id'] = $request->user()->id;
 
@@ -68,18 +64,13 @@ class ProductReviewController extends Controller
         return response()->json($review, 201);
     }
 
-    public function update(Request $request, Product $product, ProductReview $review)
+    public function update(ReviewRequest $request, Product $product, ProductReview $review)
     {
         if ($review->user_id !== $request->user()->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
 
-        $validated = $request->validate([
-            'rating' => 'required|integer|min:1|max:5',
-            'title' => 'nullable|string|max:255',
-            'body' => 'nullable|string',
-        ]);
-
+        $validated = $request->validated();
         $validated['is_approved'] = false;
         $review->update($validated);
 

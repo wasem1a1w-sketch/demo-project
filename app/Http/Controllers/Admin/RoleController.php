@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RoleRequest;
 use App\Models\UserActivityLog;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -26,13 +25,9 @@ class RoleController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(RoleRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name',
-            'permissions' => 'array',
-            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
-        ]);
+        $data = $request->validated();
 
         $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
 
@@ -69,21 +64,16 @@ class RoleController extends Controller
         ]);
     }
 
-    public function update(Request $request, Role $role)
+    public function update(RoleRequest $request, Role $role)
     {
         if (in_array($role->name, ['admin', 'client'])) {
             return redirect()->route('admin.users', ['tab' => 'roles'])
                 ->with('error', "The '{$role->name}' role is a system role and cannot be modified.");
         }
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255', Rule::unique('roles', 'name')->ignore($role->id)],
-            'permissions' => 'array',
-            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
-        ]);
+        $data = $request->validated();
 
         $role->update(['name' => $data['name']]);
-
         $role->syncPermissions($data['permissions'] ?? []);
 
         UserActivityLog::record(auth()->id(), 'role_updated', "Role updated: {$role->name}");

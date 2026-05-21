@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Setting;
+use App\Notifications\OrderConfirmation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Stripe\Checkout\Session as StripeSession;
@@ -12,6 +14,172 @@ use Stripe\Webhook;
 
 class PaymentService
 {
+    public function processCheckout(Order $order, string $provider = 'stripe'): Payment
+    {
+        $existingPending = Payment::where('order_id', $order->id)
+            ->where('status', Payment::STATUS_PENDING)
+            ->first();
+
+        if ($existingPending) {
+            $existingPending->update(['status' => Payment::STATUS_EXPIRED]);
+        }
+
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'provider' => $provider,
+            'status' => Payment::STATUS_PENDING,
+            'attempts' => 0,
+        ]);
+
+        $order->update(['payment_status' => 'pending']);
+
+        try {
+            $sessionData = $provider === 'paypal'
+                ? $this->createPayPalOrder($order)
+                : $this->createStripeSession($order);
+        } catch (\RuntimeException $e) {
+            $payment->update(['status' => Payment::STATUS_FAILED]);
+            $order->update(['payment_status' => 'failed']);
+            throw $e;
+        }
+
+        $payment->update([
+            'provider_session_id' => $sessionData['session_id'],
+            'provider_response' => $sessionData,
+        ]);
+
+        return $payment;
+    }
+
+    public function retryPayment(Order $order, Payment $payment, string $provider): array
+    {
+        if ($payment->attempts >= 3) {
+            throw new \RuntimeException('Maximum retry attempts reached');
+        }
+
+        $payment->increment('attempts');
+        $payment->update(['status' => Payment::STATUS_PENDING]);
+        $order->update(['payment_status' => 'pending']);
+
+        try {
+            return $provider === 'paypal'
+                ? $this->createPayPalOrder($order)
+                : $this->createStripeSession($order);
+        } catch (\RuntimeException $e) {
+            $payment->update(['status' => Payment::STATUS_FAILED]);
+            $order->update(['payment_status' => 'failed']);
+            throw $e;
+        }
+    }
+
+    public function confirmPayment(Payment $payment, array $sessionData): Payment
+    {
+        $payment->update([
+            'status' => Payment::STATUS_PAID,
+            'provider_response' => $sessionData,
+        ]);
+        $payment->order->update(['payment_status' => 'paid']);
+
+        if ($payment->order->user) {
+            $payment->order->user->notify(new OrderConfirmation($payment->order));
+        }
+
+        return $payment;
+    }
+
+    public function handleCheckoutComplete(string $sessionId): void
+    {
+        $payment = Payment::with('order.items.product')
+            ->where('provider_session_id', $sessionId)
+            ->first();
+
+        if (!$payment || $payment->isPaid()) {
+            return;
+        }
+
+        $this->confirmPayment($payment, []);
+    }
+
+    public function handlePaymentFailed(string $paymentIntentId): void
+    {
+        $payment = Payment::with('order.items.product')
+            ->where(function ($q) use ($paymentIntentId) {
+                $q->where('provider_transaction_id', $paymentIntentId)
+                  ->orWhere('provider_session_id', $paymentIntentId);
+            })
+            ->first();
+
+        if ($payment && !$payment->isFailed()) {
+            $payment->update(['status' => Payment::STATUS_FAILED]);
+            $payment->order->update(['payment_status' => 'failed']);
+            $payment->order->cancel();
+        }
+    }
+
+    public function isOrderAlreadyPaid(Order $order): bool
+    {
+        return Payment::where('order_id', $order->id)
+            ->where('status', Payment::STATUS_PAID)
+            ->exists() || $order->payment_status === 'paid';
+    }
+
+    public function isOrderExpired(Order $order): bool
+    {
+        return Payment::where('order_id', $order->id)
+            ->where('status', Payment::STATUS_EXPIRED)
+            ->exists() || $order->payment_status === 'expired';
+    }
+
+    public function validateItemStock(Order $order): ?string
+    {
+        foreach ($order->items as $item) {
+            if ($item->product && $item->product->stock < $item->quantity) {
+                return "Insufficient stock for {$item->product->name}";
+            }
+        }
+        return null;
+    }
+
+    public function handlePayPalCapture(Payment $payment, array $captureData): void
+    {
+        $status = $captureData['status'] ?? '';
+
+        if ($status === 'COMPLETED') {
+            $captureId = $captureData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
+
+            $payment->update([
+                'status' => Payment::STATUS_PAID,
+                'provider_transaction_id' => $captureId,
+                'provider_response' => $captureData,
+            ]);
+            $payment->order->update(['payment_status' => 'paid']);
+
+            if ($payment->order->user) {
+                $payment->order->user->notify(new OrderConfirmation($payment->order));
+            }
+        } else {
+            $payment->update([
+                'status' => Payment::STATUS_FAILED,
+                'provider_response' => $captureData,
+            ]);
+            $payment->order->update(['payment_status' => 'failed']);
+        }
+    }
+
+    public function handlePayPalCancel(?string $token): void
+    {
+        if (!$token) return;
+
+        $payment = Payment::with('order.items.product')
+            ->where('provider_session_id', $token)
+            ->first();
+
+        if ($payment && !$payment->isPaid()) {
+            $payment->update(['status' => Payment::STATUS_EXPIRED]);
+            $payment->order->cancel();
+        }
+    }
+
     private function stripeSecret(): ?string
     {
         return Setting::get('stripe_secret') ?: config('services.stripe.secret');
@@ -100,7 +268,6 @@ class PaymentService
             throw new \Exception("PayPal credentials missing.");
         }
 
-        // 1. Get Access Token using Basic Auth
         $authResponse = Http::asForm()
             ->withBasicAuth($clientId, $clientSecret)
             ->post('https://api-m.sandbox.paypal.com/v1/oauth2/token', [
@@ -113,7 +280,6 @@ class PaymentService
 
         $accessToken = $authResponse->json('access_token');
 
-        // 2. Build order payload with application_context
         $payload = [
             'intent' => 'CAPTURE',
             'application_context' => [
@@ -138,13 +304,12 @@ class PaymentService
             throw new \Exception("PayPal Order Creation Failed: " . $orderResponse->body());
         }
 
-        // 3. Find the checkout ('approve') link from the response array
         $links = $orderResponse->json('links', []);
         foreach ($links as $link) {
             if ($link['rel'] === 'approve') {
                 return [
-                    'session_id' => $orderResponse->json('id'), // The real PayPal Order ID
-                    'checkout_url' => $link['href'],           // The working checkout link
+                    'session_id' => $orderResponse->json('id'),
+                    'checkout_url' => $link['href'],
                 ];
             }
         }

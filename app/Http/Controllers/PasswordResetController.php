@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PasswordResetRequest;
+use App\Http\Requests\PasswordUpdateRequest;
 use App\Models\User;
 use App\Models\UserActivityLog;
 use App\Notifications\SendPasswordResetLink;
@@ -17,12 +19,8 @@ class PasswordResetController extends Controller
         return Inertia::render('Auth/ForgotPassword');
     }
 
-    public function sendResetLink(Request $request)
+    public function sendResetLink(PasswordResetRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-        ]);
-
         $status = Password::broker()->sendResetLink(
             $request->only('email'),
             function ($user, $token) {
@@ -52,14 +50,8 @@ class PasswordResetController extends Controller
         ]);
     }
 
-    public function updatePassword(Request $request)
+    public function updatePassword(PasswordUpdateRequest $request)
     {
-        $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => 'required|min:8|confirmed',
-        ]);
-
         $status = Password::broker()->reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {

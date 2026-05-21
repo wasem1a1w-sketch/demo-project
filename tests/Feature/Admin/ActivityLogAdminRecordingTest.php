@@ -185,7 +185,7 @@ class ActivityLogAdminRecordingTest extends TestCase
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'order_status_changed',
             'user_id' => $this->admin->id,
-            'description' => "Order #{$order->order_number} status changed: pending → processing",
+            'description' => "Order #{$order->order_number} status changed: pending -> processing",
         ]);
     }
 
@@ -320,7 +320,7 @@ class ActivityLogAdminRecordingTest extends TestCase
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'order_payment_changed',
             'user_id' => $this->admin->id,
-            'description' => "Order #{$order->order_number} payment changed: pending → paid",
+            'description' => "Order #{$order->order_number} payment changed: pending -> paid",
         ]);
     }
 

@@ -43,13 +43,33 @@ class Category extends Model
         return $query->where('is_active', true);
     }
 
-    public function getPathAttribute()
+    public function loadAncestors(): static
+    {
+        $ancestors = collect();
+        $parent = $this->parent;
+
+        while ($parent) {
+            $ancestors->push($parent);
+            $parent = $parent->parent;
+        }
+
+        return $this->setRelation('ancestors', $ancestors);
+    }
+
+    public function getPathAttribute(): string
     {
         $path = [$this->name];
-        $category = $this->parent;
-        while ($category) {
-            array_unshift($path, $category->name);
-            $category = $category->parent;
+
+        if ($this->relationLoaded('ancestors')) {
+            foreach ($this->ancestors as $ancestor) {
+                array_unshift($path, $ancestor->name);
+            }
+        } else {
+            $category = $this->parent;
+            while ($category) {
+                array_unshift($path, $category->name);
+                $category = $category->parent;
+            }
         }
 
         return implode(' > ', $path);

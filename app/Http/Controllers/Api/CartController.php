@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\CartItemRequest;
+use App\Http\Requests\Api\CartQuantityRequest;
+use App\Http\Requests\Api\CouponCodeRequest;
 use App\Models\Coupon;
 use App\Models\Product;
 use App\Models\UserActivityLog;
@@ -23,11 +26,20 @@ class CartController extends Controller
 
     protected function getCart()
     {
-        return \DB::table('cart_items')
+        $items = \DB::table('cart_items')
             ->where('session_id', $this->getSessionId())
-            ->get()
-            ->map(function ($item) {
-                $product = Product::with('images')->find($item->product_id);
+            ->get();
+
+        if ($items->isEmpty()) {
+            return collect();
+        }
+
+        $productIds = $items->pluck('product_id')->unique();
+        $products = Product::with('images')->whereIn('id', $productIds)->get()->keyBy('id');
+
+        return $items
+            ->map(function ($item) use ($products) {
+                $product = $products->get($item->product_id);
                 if (! $product) return null;
 
                 return [
@@ -71,13 +83,8 @@ class CartController extends Controller
         ]);
     }
 
-    public function add(Request $request)
+    public function add(CartItemRequest $request)
     {
-        $request->validate([
-            'product_id' => 'required|exists:products,id',
-            'quantity' => 'integer|min:1|max:99',
-        ]);
-
         $product = Product::findOrFail($request->product_id);
 
         if ($product->stock < ($request->quantity ?? 1)) {
@@ -119,12 +126,8 @@ class CartController extends Controller
         ]);
     }
 
-    public function update(Request $request, $id)
+    public function update(CartQuantityRequest $request, $id)
     {
-        $request->validate([
-            'quantity' => 'required|integer|min:0|max:99',
-        ]);
-
         $item = \DB::table('cart_items')
             ->where('id', $id)
             ->where('session_id', $this->getSessionId())
@@ -192,10 +195,8 @@ class CartController extends Controller
         ]);
     }
 
-    public function applyCoupon(Request $request)
+    public function applyCoupon(CouponCodeRequest $request)
     {
-        $request->validate(['code' => 'required|string']);
-
         $coupon = Coupon::where('code', strtoupper($request->code))->first();
 
         if (! $coupon || ! $coupon->isValid()) {

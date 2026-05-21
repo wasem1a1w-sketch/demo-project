@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProductRequest;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -43,34 +44,13 @@ class ProductController extends Controller
         return Inertia::render('Admin/Products/Create', ['categories' => $categories]);
     }
 
-    public function store(Request $request)
+    public function store(ProductRequest $request)
     {
-        $request->merge([
-            'is_active' => filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN),
-            'is_featured' => filter_var($request->input('is_featured'), FILTER_VALIDATE_BOOLEAN),
-        ]);
+        $validated = $request->validated();
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:products',
-            'description' => 'nullable',
-            'short_description' => 'nullable',
-            'price' => 'required|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'category_id' => 'nullable|exists:categories,id',
-            'sku' => 'nullable|string|max:100',
-            'weight' => 'nullable|integer',
-            'weight_unit' => 'nullable|string|max:20',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:3072',
-            'gallery_images' => 'nullable|array|max:4',
-            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:3072',
-        ]);
-
-        $validated['is_active'] = $validated['is_active'] ?? false;
-        $validated['is_featured'] = $validated['is_featured'] ?? false;
-
-        $product = Product::create(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
+        $product = Product::create(
+            collect($validated)->except(['main_image', 'gallery_images'])->toArray()
+        );
 
         UserActivityLog::record(auth()->id(), 'product_created', "Product created: {$product->name}");
 
@@ -100,38 +80,14 @@ class ProductController extends Controller
         return Inertia::render('Admin/Products/Edit', ['product' => $product, 'categories' => $categories]);
     }
 
-    public function update(Request $request, $id)
+    public function update(ProductRequest $request, $id)
     {
         $product = Product::with('images')->findOrFail($id);
+        $validated = $request->validated();
 
-        $request->merge([
-            'is_active' => filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN),
-            'is_featured' => filter_var($request->input('is_featured'), FILTER_VALIDATE_BOOLEAN),
-        ]);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:products,slug,'.$id,
-            'description' => 'nullable',
-            'short_description' => 'nullable',
-            'price' => 'required|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'category_id' => 'nullable|exists:categories,id',
-            'is_active' => 'sometimes|boolean',
-            'is_featured' => 'sometimes|boolean',
-            'sku' => 'nullable|string|max:100',
-            'weight' => 'nullable|integer',
-            'weight_unit' => 'nullable|string|max:20',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:3072',
-            'gallery_images' => 'nullable|array',
-            'gallery_images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:3072',
-        ]);
-
-        $validated['is_active'] = $validated['is_active'] ?? false;
-        $validated['is_featured'] = $validated['is_featured'] ?? false;
-
-        $product->update(collect($validated)->except(['main_image', 'gallery_images'])->toArray());
+        $product->update(
+            collect($validated)->except(['main_image', 'gallery_images'])->toArray()
+        );
 
         UserActivityLog::record(auth()->id(), 'product_updated', "Product updated: {$product->name}");
 
@@ -175,10 +131,10 @@ class ProductController extends Controller
 
         $product->delete();
 
-        return back();
+        return to_route('admin.products');
     }
 
-    protected function uploadImage($product, $file, bool $isPrimary = false): void
+    private function uploadImage($product, $file, bool $isPrimary = false): void
     {
         if (!$file instanceof \Illuminate\Http\UploadedFile || !$file->isValid()) {
             return;

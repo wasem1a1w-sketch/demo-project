@@ -56,7 +56,7 @@ class ShopController extends Controller
     {
         $order = null;
         if (auth()->check()) {
-            $order = Order::with('items')
+            $order = Order::with('items.product')
                 ->where('user_id', auth()->id())
                 ->orderByDesc('created_at')
                 ->first();

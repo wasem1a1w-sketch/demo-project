@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Events\ClientNotificationBroadcast;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\OrderStatusRequest;
 use App\Models\AdminNotification;
 use App\Models\Order;
 use App\Models\UserActivityLog;
@@ -30,14 +31,10 @@ class OrderController extends Controller
         return Inertia::render('Admin/Orders/Show', ['order' => $order]);
     }
 
-    public function update(Request $request, $id)
+    public function update(OrderStatusRequest $request, $id)
     {
         $order = Order::findOrFail($id);
-
-        $validated = $request->validate([
-            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
-            'payment_status' => 'required|in:pending,paid,failed,refunded',
-        ]);
+        $validated = $request->validated();
 
         $originalStatus = $order->status;
         $originalPaymentStatus = $order->payment_status;
@@ -45,7 +42,7 @@ class OrderController extends Controller
         $order->update($validated);
 
         if ($originalStatus !== $validated['status']) {
-            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} → {$validated['status']}");
+            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} -> {$validated['status']}");
             AdminNotification::notify('order_status_changed', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
@@ -67,16 +64,11 @@ class OrderController extends Controller
         }
 
         if ($originalPaymentStatus !== $validated['payment_status']) {
-            UserActivityLog::record(auth()->id(), 'order_payment_changed', "Order #{$order->order_number} payment changed: {$originalPaymentStatus} → {$validated['payment_status']}");
+            UserActivityLog::record(auth()->id(), 'order_payment_changed', "Order #{$order->order_number} payment changed: {$originalPaymentStatus} -> {$validated['payment_status']}");
         }
 
         if ($validated['status'] === 'cancelled' && $originalStatus !== 'cancelled') {
-            $order->load('items.product');
-            foreach ($order->items as $item) {
-                if ($item->product) {
-                    $item->product->increment('stock', $item->quantity);
-                }
-            }
+            $order->cancel();
         }
 
         return back();

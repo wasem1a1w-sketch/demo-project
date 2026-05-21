@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UserRequest;
 use App\Models\User;
 use App\Models\UserActivityLog;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 
@@ -39,14 +38,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(UserRequest $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8',
-            'role' => ['nullable', 'string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
-        ]);
+        $data = $request->validated();
 
         $user = User::create([
             'name' => $data['name'],
@@ -84,14 +78,9 @@ class UserController extends Controller
         ]);
     }
 
-    public function update(Request $request, User $user)
+    public function update(UserRequest $request, User $user)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => 'nullable|string|min:8',
-            'role' => ['nullable', 'string', Rule::exists('roles', 'name')->where('guard_name', 'web')],
-        ]);
+        $data = $request->validated();
 
         $user->update([
             'name' => $data['name'],
