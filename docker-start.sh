@@ -2,7 +2,7 @@
 
 set -e
 
-# Detect Railway and set proper APP_URL
+# 1. Detect Railway and set proper APP_URL
 if [ -n "$RAILWAY_STATIC_URL" ]; then
   url="$RAILWAY_STATIC_URL"
   url="${url#http://}"
@@ -35,7 +35,7 @@ elif [ -n "$RAILWAY_PUBLIC_DOMAIN" ]; then
   sed -i "s|REVERB_HOST=.*|REVERB_HOST=$url|; s|REVERB_PORT=.*|REVERB_PORT=443|; s|REVERB_SCHEME=.*|REVERB_SCHEME=https|" /app/.env
 fi
 
-# Detect Railway MySQL database
+# 2. Detect Railway MySQL database
 MYSQL_URL="${MYSQL_URL:-${DATABASE_URL:-}}"
 if [ -n "$MYSQL_URL" ]; then
   tmp="${MYSQL_URL#mysql://}"
@@ -67,26 +67,39 @@ if [ -n "$MYSQL_URL" ]; then
   } >> /app/.env
 fi
 
-# Start Reverb in single-container mode (not when using docker-compose with separate reverb service)
-if [ "$REVERB_SERVER_HOST" = "0.0.0.0" ] || [ "$REVERB_SERVER_HOST" = "127.0.0.1" ] || [ -z "$REVERB_SERVER_HOST" ]; then
-  echo "Starting Reverb WebSocket server..."
-  export REVERB_SERVER_HOST=0.0.0.0
-  php artisan reverb:start --host=0.0.0.0 --port=8081 &
-  echo "Reverb started on port 8081 (PID: $!)"
-fi
-
+# 3. Check for Vite manifest
 echo "Checking for Vite manifest..."
 if [ ! -f /app/public/build/manifest.json ]; then
   echo "Manifest not found, rebuilding assets..."
   npm run build || true
 fi
 
+# 4. Clear old accidental build-time bootstrap caches
 php artisan config:clear || true
+php artisan route:clear || true
 php artisan view:clear || true
+
+# 5. Safely run migrations while environment variables are completely fresh
+echo "Running database migrations..."
 php artisan migrate --force || true
 php artisan db:seed --force || true
+
+# 6. Cache optimizations for production runtime speed
+echo "Caching configuration and routes..."
+php artisan config:cache || true
+php artisan route:cache || true
 php artisan view:cache || true
 
+# 7. Spin up Reverb exactly once in the background right before the main engine starts
+if [ "$REVERB_SERVER_HOST" = "0.0.0.0" ] || [ "$REVERB_SERVER_HOST" = "127.0.0.1" ] || [ -z "$REVERB_SERVER_HOST" ]; then
+  echo "Starting Reverb WebSocket server on port 8081..."
+  export REVERB_SERVER_HOST=0.0.0.0
+  php artisan reverb:start --host=0.0.0.0 --port=8081 &
+fi
+
+# 8. Sanity check permissions for runtime uploads and caches
 chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
+# 9. Hand off execution control to FrankenPHP
+echo "Starting FrankenPHP web server..."
 exec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"
