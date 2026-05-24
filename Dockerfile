@@ -59,15 +59,11 @@ COPY . .
 COPY Caddyfile /etc/caddy/Caddyfile
 
 # Run Laravel optimizations and build assets
+# Run production asset compilation, but DO NOT cache configurations yet
 RUN cp .env.example .env \
-    && sed -i 's|APP_URL=http://localhost|APP_URL=|' .env \
-    && php artisan key:generate --force \
-    && php artisan route:cache \
     && npm run build \
-    && ls -la public/build/ \
     && mkdir -p /app/public/uploads/original /app/public/uploads/thumbnails /app/public/uploads/icons \
     && chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
-
 # Expose ports (FrankenPHP + Reverb)
 EXPOSE 8080 8081
 
