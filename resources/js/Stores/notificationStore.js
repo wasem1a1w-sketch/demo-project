@@ -54,9 +54,11 @@ export const useNotificationStore = defineStore('notifications', () => {
         console.log('[Notifications] Initializing Echo...', { userId, isAdmin });
 
         const isSecure = window.location.protocol === 'https:';
+        const reverbKey = document.head.querySelector('meta[name="reverb-key"]')?.content || import.meta.env.VITE_REVERB_APP_KEY;
         echo.value = new Echo({
             broadcaster: 'reverb',
-            key: import.meta.env.VITE_REVERB_APP_KEY,
+            key: reverbKey,
+            wsPath: '/app',
             wsHost: window.location.hostname,
             wsPort: isSecure ? 443 : 80,
             forceTLS: isSecure,
