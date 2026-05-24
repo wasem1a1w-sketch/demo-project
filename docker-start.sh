@@ -67,39 +67,45 @@ if [ -n "$MYSQL_URL" ]; then
   } >> /app/.env
 fi
 
-# 3. Check for Vite manifest
+# 3. Generate application encryption key if not already set
+if [ -z "$APP_KEY" ] || grep -q '^APP_KEY=$' /app/.env 2>/dev/null; then
+    echo "Generating application key..."
+    php artisan key:generate --force
+fi
+
+# 4. Check for Vite manifest
 echo "Checking for Vite manifest..."
 if [ ! -f /app/public/build/manifest.json ]; then
   echo "Manifest not found, rebuilding assets..."
   npm run build || true
 fi
 
-# 4. Clear old accidental build-time bootstrap caches
+# 5. Clear old accidental build-time bootstrap caches
 php artisan config:clear || true
 php artisan route:clear || true
 php artisan view:clear || true
 
-# 5. Safely run migrations while environment variables are completely fresh
+# 6. Safely run migrations while environment variables are completely fresh
 echo "Running database migrations..."
 php artisan migrate --force || true
 php artisan db:seed --force || true
 
-# 6. Cache optimizations for production runtime speed
+# 7. Cache optimizations for production runtime speed
 echo "Caching configuration and routes..."
 php artisan config:cache || true
 php artisan route:cache || true
 php artisan view:cache || true
 
-# 7. Spin up Reverb exactly once in the background right before the main engine starts
+# 8. Spin up Reverb exactly once in the background right before the main engine starts
 if [ "$REVERB_SERVER_HOST" = "0.0.0.0" ] || [ "$REVERB_SERVER_HOST" = "127.0.0.1" ] || [ -z "$REVERB_SERVER_HOST" ]; then
   echo "Starting Reverb WebSocket server on port 8081..."
   export REVERB_SERVER_HOST=0.0.0.0
   php artisan reverb:start --host=0.0.0.0 --port=8081 &
 fi
 
-# 8. Sanity check permissions for runtime uploads and caches
+# 9. Sanity check permissions for runtime uploads and caches
 chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
-# 9. Hand off execution control to FrankenPHP
+# 10. Hand off execution control to FrankenPHP
 echo "Starting FrankenPHP web server..."
 exec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"

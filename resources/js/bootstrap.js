@@ -1,7 +1,6 @@
 import axios from 'axios';
 window.axios = axios;
 
-axios.defaults.baseURL = '/myproject/public';
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 // Read CSRF token from meta tag
