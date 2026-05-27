@@ -72,13 +72,12 @@ class WishlistController extends Controller
     private function getWishlist()
     {
         return WishlistItem::where('user_id', auth()->id())
-            ->with('product.primaryImage')
-            ->withAvg(['product.reviews' => fn ($q) => $q->where('is_approved', true)], 'rating')
-            ->withCount(['product.reviews' => fn ($q) => $q->where('is_approved', true)])
+            ->with(['product.primaryImage', 'product.reviews' => fn ($q) => $q->where('is_approved', true)])
             ->latest()
             ->get()
             ->map(function ($item) {
                 $product = $item->product;
+                $reviews = $product?->reviews ?? collect();
                 return [
                     'id' => $item->id,
                     'product_id' => $item->product_id,
@@ -90,8 +89,8 @@ class WishlistController extends Controller
                         'compare_price' => $product->compare_price,
                         'image' => $product->primaryImage?->thumb_path,
                         'in_stock' => $product->stock > 0,
-                        'reviews_avg_rating' => (float) ($item->product_reviews_avg_rating ?? 0),
-                        'reviews_count' => (int) ($item->product_reviews_count ?? 0),
+                        'reviews_avg_rating' => (float) ($reviews->avg('rating') ?? 0),
+                        'reviews_count' => $reviews->count(),
                     ] : null,
                 ];
             });

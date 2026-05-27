@@ -96,12 +96,10 @@ php artisan config:cache || true
 php artisan route:cache || true
 php artisan view:cache || true
 
-# 8. Spin up Reverb exactly once in the background right before the main engine starts
-if [ "$REVERB_SERVER_HOST" = "0.0.0.0" ] || [ "$REVERB_SERVER_HOST" = "127.0.0.1" ] || [ -z "$REVERB_SERVER_HOST" ]; then
-  echo "Starting Reverb WebSocket server on port 8081..."
-  export REVERB_SERVER_HOST=0.0.0.0
-  php artisan reverb:start --host=0.0.0.0 --port=8081 &
-fi
+# 8. Spin up Reverb in the background right before the main engine starts
+echo "Starting Reverb WebSocket server on port 8081..."
+export REVERB_SERVER_HOST=0.0.0.0
+php artisan reverb:start --host=0.0.0.0 --port=8081 &
 
 # 9. Sanity check permissions for runtime uploads and caches
 chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
