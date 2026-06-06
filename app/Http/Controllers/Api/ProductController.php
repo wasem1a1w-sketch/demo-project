@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ReviewStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
@@ -15,13 +16,13 @@ class ProductController extends Controller
         $sub = DB::table('product_reviews')
             ->selectRaw('COALESCE(AVG(rating), 0)')
             ->whereColumn('product_id', 'products.id')
-            ->where('is_approved', 1);
+            ->where('status', ReviewStatus::Approved);
 
         $query = Product::with(['images', 'category'])
             ->active()
             ->withCount('images')
             ->addSelect(['reviews_avg_rating' => $sub])
-            ->withCount(['reviews' => fn ($q) => $q->where('is_approved', true)]);
+            ->withCount(['reviews' => fn ($q) => $q->where('status', ReviewStatus::Approved)]);
 
         if ($request->category) {
             $query->where('category_id', $request->category);
@@ -85,13 +86,13 @@ class ProductController extends Controller
         $sub = DB::table('product_reviews')
             ->selectRaw('COALESCE(AVG(rating), 0)')
             ->whereColumn('product_id', 'products.id')
-            ->where('is_approved', 1);
+            ->where('status', ReviewStatus::Approved);
 
         $product = Product::with(['images', 'category'])
             ->where('slug', $slug)
             ->active()
             ->addSelect(['reviews_avg_rating' => $sub])
-            ->withCount(['reviews' => fn ($q) => $q->where('is_approved', true)])
+            ->withCount(['reviews' => fn ($q) => $q->where('status', ReviewStatus::Approved)])
             ->firstOrFail();
 
         return response()->json($product);

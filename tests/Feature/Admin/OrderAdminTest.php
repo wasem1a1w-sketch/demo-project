@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,17 +50,17 @@ class OrderAdminTest extends TestCase
 
     public function test_admin_can_update_order_status(): void
     {
-        $order = Order::factory()->create(['status' => Order::STATUS_PENDING]);
+        $order = \App\Models\Order::factory()->create(['status' => OrderStatus::Pending]);
 
         $response = $this->actingAs($this->admin)->put("/admin/orders/{$order->id}", [
-            'status' => Order::STATUS_PROCESSING,
+            'status' => OrderStatus::Processing->value,
             'payment_status' => 'pending',
         ]);
 
         $response->assertStatus(302);
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
-            'status' => Order::STATUS_PROCESSING,
+            'status' => OrderStatus::Processing,
         ]);
     }
 

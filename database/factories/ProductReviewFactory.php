@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ReviewStatus;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\User;
@@ -19,7 +20,7 @@ class ProductReviewFactory extends Factory
             'rating' => $this->faker->numberBetween(1, 5),
             'title' => $this->faker->sentence(3),
             'body' => $this->faker->paragraph(),
-            'is_approved' => $this->faker->boolean(),
+            'status' => $this->faker->randomElement([ReviewStatus::Pending, ReviewStatus::Approved]),
         ];
     }
 }

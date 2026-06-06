@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\ReviewStatus;
 use App\Models\Category;
 use App\Models\Coupon;
 use App\Models\Order;
@@ -242,7 +243,7 @@ class ActivityLogAdminRecordingTest extends TestCase
             'user_id' => User::factory()->create()->id,
             'rating' => 5,
             'title' => 'Test',
-            'is_approved' => false,
+            'status' => ReviewStatus::Pending,
         ]);
 
         $this->actingAs($this->admin)->patch("/admin/reviews/{$review->id}/approve");
@@ -262,7 +263,7 @@ class ActivityLogAdminRecordingTest extends TestCase
             'user_id' => User::factory()->create()->id,
             'rating' => 5,
             'title' => 'Test',
-            'is_approved' => true,
+            'status' => ReviewStatus::Approved,
         ]);
 
         $this->actingAs($this->admin)->patch("/admin/reviews/{$review->id}/reject");

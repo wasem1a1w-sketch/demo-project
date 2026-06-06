@@ -18,7 +18,7 @@
                 <div class="flex items-center justify-between mb-2">
                     <h4 class="font-semibold text-gray-900 dark:text-white">Your Review</h4>
                     <div class="flex items-center gap-2">
-                        <span v-if="!myReview.is_approved" class="text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded">Pending Approval</span>
+                        <span v-if="myReview.status === 'pending'" class="text-xs text-yellow-600 dark:text-yellow-400 font-medium bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded">Pending Approval</span>
                         <button @click="startEditing" class="inline-flex items-center px-2.5 py-1 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">Edit</button>
                         <button @click="handleDelete" class="inline-flex items-center px-2.5 py-1 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition ease-in-out duration-150">Delete</button>
                     </div>

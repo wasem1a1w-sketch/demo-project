@@ -30,7 +30,8 @@
                             <p v-if="review.body" class="truncate">{{ review.body }}</p>
                         </td>
                         <td class="px-6 py-4">
-                            <span v-if="review.is_approved" class="badge badge-success">Approved</span>
+                            <span v-if="review.status === 'approved'" class="badge badge-success">Approved</span>
+                            <span v-else-if="review.status === 'rejected'" class="badge bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Rejected</span>
                             <span v-else class="badge bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">Pending</span>
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ review.created_at }}</td>
@@ -100,7 +101,8 @@
                             <div>
                                 <span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Status</span>
                                 <div class="mt-1">
-                                    <span v-if="selectedReview.is_approved" class="badge badge-success">Approved</span>
+                                    <span v-if="selectedReview.status === 'approved'" class="badge badge-success">Approved</span>
+                                    <span v-else-if="selectedReview.status === 'rejected'" class="badge bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300">Rejected</span>
                                     <span v-else class="badge bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">Pending</span>
                                 </div>
                             </div>
@@ -112,12 +114,12 @@
                         </div>
 
                         <div class="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <button v-if="!selectedReview.is_approved && can('reviews.update')"
+                            <button v-if="selectedReview.status === 'pending' && can('reviews.update')"
                                 @click="approve(selectedReview.id)"
                                 class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer">
                                 Approve
                             </button>
-                            <button v-if="selectedReview.is_approved && can('reviews.update')"
+                            <button v-if="selectedReview.status === 'approved' && can('reviews.update')"
                                 @click="reject(selectedReview.id)"
                                 class="inline-flex items-center px-4 py-2 bg-yellow-600 border border-transparent rounded-md font-semibold text-xs text-white hover:bg-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition ease-in-out duration-150 cursor-pointer">
                                 Reject

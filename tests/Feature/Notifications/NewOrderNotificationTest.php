@@ -2,7 +2,8 @@
 
 namespace Tests\Feature\Notifications;
 
-use App\Models\Order;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\User;
 use App\Notifications\NewOrderNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,14 +22,14 @@ class NewOrderNotificationTest extends TestCase
         $order = \App\Models\Order::create([
             'order_number' => 'ORD-12345',
             'user_id' => $user->id,
-            'status' => \App\Models\Order::STATUS_PENDING,
+            'status' => OrderStatus::Pending,
             'subtotal' => 100.00,
             'tax' => 0.00,
             'shipping' => 0.00,
             'discount' => 0.00,
             'total' => 100.00,
             'payment_method' => 'card',
-            'payment_status' => \App\Models\Order::PAYMENT_PENDING,
+            'payment_status' => PaymentStatus::Pending,
             'shipping_name' => 'John Doe',
         ]);
 

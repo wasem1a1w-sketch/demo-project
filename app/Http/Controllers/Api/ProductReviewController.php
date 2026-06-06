@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ReviewStatus;
+use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ReviewRequest;
 use App\Models\AdminNotification;
@@ -16,7 +18,7 @@ class ProductReviewController extends Controller
     {
         $reviews = ProductReview::where('product_id', $product->id)
             ->where(function ($q) {
-                $q->where('is_approved', true);
+                $q->where('status', ReviewStatus::Approved);
                 if (auth()->check()) {
                     $q->orWhere('user_id', auth()->id());
                 }
@@ -71,8 +73,13 @@ class ProductReviewController extends Controller
         }
 
         $validated = $request->validated();
-        $validated['is_approved'] = false;
         $review->update($validated);
+
+        try {
+            $review->transitionStatus(ReviewStatus::Pending);
+        } catch (InvalidStateTransitionException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         UserActivityLog::record($request->user()->id, 'review_updated', "Review #{$review->id} updated for product: {$product->name}");
 

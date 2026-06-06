@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\ReviewStatus;
 use App\Models\Product;
 use App\Models\ProductReview;
 use App\Models\User;
@@ -49,7 +50,7 @@ class ReviewAdminTest extends TestCase
         $review = ProductReview::factory()->create([
             'user_id' => $user->id,
             'product_id' => $product->id,
-            'is_approved' => false,
+            'status' => ReviewStatus::Pending,
         ]);
 
         $response = $this->actingAs($this->admin)->patch("/admin/reviews/{$review->id}/approve");
@@ -57,7 +58,7 @@ class ReviewAdminTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('product_reviews', [
             'id' => $review->id,
-            'is_approved' => true,
+            'status' => ReviewStatus::Approved,
         ]);
     }
 
@@ -68,7 +69,7 @@ class ReviewAdminTest extends TestCase
         $review = ProductReview::factory()->create([
             'user_id' => $user->id,
             'product_id' => $product->id,
-            'is_approved' => true,
+            'status' => ReviewStatus::Approved,
         ]);
 
         $response = $this->actingAs($this->admin)->patch("/admin/reviews/{$review->id}/reject");
@@ -76,7 +77,7 @@ class ReviewAdminTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseHas('product_reviews', [
             'id' => $review->id,
-            'is_approved' => false,
+            'status' => ReviewStatus::Rejected,
         ]);
     }
 

@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Exceptions\InvalidStateTransitionException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -41,18 +44,9 @@ class Order extends Model
         'shipping' => 'decimal:2',
         'discount' => 'decimal:2',
         'total' => 'decimal:2',
+        'status' => OrderStatus::class,
+        'payment_status' => PaymentStatus::class,
     ];
-
-    const STATUS_PENDING = 'pending';
-    const STATUS_PROCESSING = 'processing';
-    const STATUS_SHIPPED = 'shipped';
-    const STATUS_DELIVERED = 'delivered';
-    const STATUS_CANCELLED = 'cancelled';
-
-    const PAYMENT_PENDING = 'pending';
-    const PAYMENT_PAID = 'paid';
-    const PAYMENT_FAILED = 'failed';
-    const PAYMENT_REFUNDED = 'refunded';
 
     public function user(): BelongsTo
     {
@@ -83,26 +77,53 @@ class Order extends Model
         return $number;
     }
 
-    public function cancel(): void
+    public function transitionStatus(OrderStatus $newStatus): static
     {
-        $this->loadMissing('items.product');
+        $currentStatus = $this->status;
 
-        foreach ($this->items as $item) {
-            $item->product?->increment('stock', $item->quantity);
+        if (!$currentStatus instanceof OrderStatus) {
+            throw new \RuntimeException('Current status is not a valid OrderStatus enum.');
         }
 
-        $this->update(['status' => self::STATUS_CANCELLED]);
+        if ($currentStatus === $newStatus) {
+            return $this;
+        }
+
+        if (!$currentStatus->canTransitionTo($newStatus)) {
+            throw new InvalidStateTransitionException(
+                $currentStatus->value,
+                $newStatus->value,
+                class_basename(static::class)
+            );
+        }
+
+        if ($newStatus === OrderStatus::Cancelled) {
+            $this->loadMissing('items.product');
+
+            foreach ($this->items as $item) {
+                $item->product?->increment('stock', $item->quantity);
+            }
+        }
+
+        $this->status = $newStatus;
+        $this->save();
+
+        return $this;
+    }
+
+    public function cancel(): void
+    {
+        $this->transitionStatus(OrderStatus::Cancelled);
     }
 
     public function getStatusColorAttribute()
     {
-        return match ($this->status) {
-            self::STATUS_PENDING => 'yellow',
-            self::STATUS_PROCESSING => 'blue',
-            self::STATUS_SHIPPED => 'indigo',
-            self::STATUS_DELIVERED => 'green',
-            self::STATUS_CANCELLED => 'red',
-            default => 'gray',
-        };
+        $status = $this->status;
+
+        if ($status instanceof OrderStatus) {
+            return $status->color();
+        }
+
+        return 'gray';
     }
 }

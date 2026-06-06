@@ -229,14 +229,11 @@
 <script setup>
 import { reactive, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import { useNotification } from '../../../composables/useNotification';
 import { usePermission } from '../../../composables/usePermission';
 import { formatDate } from '../../../helpers/format';
 
 const { can } = usePermission();
 const props = defineProps({ order: Object });
-
-const { success } = useNotification();
 
 const statusMap = { pending: 0, processing: 1, shipped: 2, delivered: 3, cancelled: -1 };
 const status = computed(() => statusMap[props.order.status] ?? -1);
@@ -268,10 +265,6 @@ function paymentBadgeClass(status) {
 }
 
 function updateOrder() {
-    router.put(route('admin.orders.update', { id: props.order.id }), form, {
-        onSuccess: () => {
-            success('Order updated');
-        },
-    });
+    router.put(route('admin.orders.update', { id: props.order.id }), form);
 }
 </script>

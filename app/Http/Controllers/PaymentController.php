@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PaymentStatus;
 use App\Http\Requests\PaymentRequest;
 use App\Models\Order;
 use App\Models\Payment;
@@ -180,8 +181,8 @@ class PaymentController extends Controller
         try {
             $captureData = $this->paymentService->capturePayPalOrder($request);
         } catch (\Exception $e) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $payment->order->update(['payment_status' => 'failed']);
+            $payment->transitionStatus(PaymentStatus::Failed);
+            $payment->order->update(['payment_status' => PaymentStatus::Failed]);
             return response()->json(['error' => $e->getMessage()], 502);
         }
 

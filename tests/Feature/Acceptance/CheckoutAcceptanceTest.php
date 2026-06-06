@@ -220,7 +220,7 @@ class CheckoutAcceptanceTest extends TestCase
 
         $webhookResponse->assertStatus(200);
 
-        $this->assertEquals('failed', $payment->fresh()->status);
+        $this->assertEquals('failed', $payment->fresh()->status->value);
         $this->assertDatabaseHas('orders', ['id' => $orderId, 'payment_status' => 'failed']);
         $this->assertEquals(10, $product->fresh()->stock);
     }

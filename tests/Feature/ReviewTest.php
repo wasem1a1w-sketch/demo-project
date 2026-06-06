@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ReviewStatus;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductReview;
@@ -49,11 +50,11 @@ class ReviewTest extends TestCase
     {
         ProductReview::factory()->count(2)->create([
             'product_id' => $this->product->id,
-            'is_approved' => true,
+            'status' => ReviewStatus::Approved,
         ]);
         ProductReview::factory()->create([
             'product_id' => $this->product->id,
-            'is_approved' => false,
+            'status' => ReviewStatus::Pending,
         ]);
 
         $response = $this->getJson("/api/products/{$this->product->id}/reviews");

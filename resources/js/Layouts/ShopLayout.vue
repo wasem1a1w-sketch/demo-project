@@ -220,17 +220,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useCartStore } from '../Stores/cart';
 import { useWishlistStore } from '../Stores/wishlist';
 import { usePermission } from '../composables/usePermission';
+import { useNotification } from '../composables/useNotification';
 import Notifications from '../components/Notifications.vue';
 import NotificationBell from '../components/NotificationBell.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
 
 const { can } = usePermission();
+const { error, success } = useNotification();
 
 const page = usePage();
 const cartStore = useCartStore();
@@ -250,6 +252,15 @@ onMounted(async () => {
         await wishlistStore.fetchWishlist();
     }
 });
+
+watch(() => page.props, (props) => {
+    if (props.flash?.error) {
+        error(props.flash.error);
+    }
+    if (props.flash?.success) {
+        success(props.flash.success);
+    }
+}, { deep: true, immediate: true });
 
 function isActive(url) {
     return page.url === url || page.url.startsWith(url);

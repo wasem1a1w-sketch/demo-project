@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Enums\ReviewStatus;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductReview;
@@ -48,7 +49,7 @@ class ReviewTest extends TestCase
         $this->actingAs($user1)->postJson("/api/products/{$this->product->id}/reviews", [
             'rating' => 5, 'title' => 'Approved',
         ]);
-        ProductReview::where('title', 'Approved')->update(['is_approved' => true]);
+        ProductReview::where('title', 'Approved')->update(['status' => ReviewStatus::Approved]);
 
         $this->actingAs($user2)->postJson("/api/products/{$this->product->id}/reviews", [
             'rating' => 2, 'title' => 'Pending',
@@ -84,7 +85,7 @@ class ReviewTest extends TestCase
         $response->assertSessionHasNoErrors();
         $this->assertDatabaseHas('product_reviews', [
             'id' => $review['id'],
-            'is_approved' => true,
+            'status' => ReviewStatus::Approved,
         ]);
     }
 
@@ -94,14 +95,14 @@ class ReviewTest extends TestCase
         $review = $this->actingAs($user)->postJson("/api/products/{$this->product->id}/reviews", [
             'rating' => 4,
         ])->json();
-        ProductReview::where('id', $review['id'])->update(['is_approved' => true]);
+        ProductReview::where('id', $review['id'])->update(['status' => ReviewStatus::Approved]);
 
         $response = $this->actingAs($this->admin)->patch("/admin/reviews/{$review['id']}/reject");
 
         $response->assertSessionHasNoErrors();
         $this->assertDatabaseHas('product_reviews', [
             'id' => $review['id'],
-            'is_approved' => false,
+            'status' => ReviewStatus::Rejected,
         ]);
     }
 
