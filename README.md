@@ -333,10 +333,34 @@ All controller validation extracted to **21 FormRequest classes** in `app/Http/R
 - **`app/Services/OrderService.php`** (new) — 170 lines from `Api/OrderController@store`
 - **`app/Services/PaymentService.php`** (refactored) — checkout, retry, confirm, webhook handlers extracted from `PaymentController`
 
+### State Machine (PHP Enums)
+
+Custom state machine implementation replacing raw string status fields with PHP 8.1+ backed enums and validated transitions:
+
+**3 enums created:**
+- `OrderStatus` — `Pending → Processing/Shipped/Delivered/Cancelled`, `Cancelled → Pending`
+- `PaymentStatus` — `Pending → Paid/Failed/Expired`, `Failed → Pending`, `Paid → Refunded`
+- `ReviewStatus` — `Pending → Approved/Rejected`, `Approved/Rejected ↔ Pending`
+
+**Each enum provides:**
+- `allowedTransitions(): array` — permitted transitions per state
+- `canTransitionTo(self $target): bool` — validation check
+- `label(): string` — human-readable name
+
+**Models updated:**
+- `Order` — enum casts for `status` (OrderStatus) and `payment_status` (PaymentStatus), `transitionStatus()` auto-restores stock on cancellation
+- `Payment` — enum cast for `status` (PaymentStatus), `transitionStatus()`
+- `ProductReview` — replaced `is_approved` boolean with `status` (ReviewStatus) via migration, `transitionStatus()`
+
+**Transition hook:** `Order::transitionStatus()` automatically loads order items and restocks products when transitioning to `Cancelled` — covers all paths (admin panel, payment failure, PayPal cancel) and eliminates the previous bug where admin cancellation bypassed stock restoration.
+
+**Error handling:** Controllers catch `InvalidStateTransitionException` and return `back()->with('error', $message)` instead of a 500 error page. A global flash-to-toast bridge in both AdminLayout and ShopLayout watches `page.props` deeply and displays flash messages as toast notifications via `Notifications.vue` (red for errors, green for success). Exception messages use `class_basename()` for clean model names (e.g. "Order" not "App\Models\Order").
+
+**Migration:** `2026_05_17_230000_replace_review_is_approved_with_status.php` — adds `status` string column, migrates boolean data, drops `is_approved`.
+
 ### Other
 
 - `Order::generateOrderNumber()` uses `Str::random(8)` + uniqueness loop (was `uniqid()`)
-- `Admin/OrderController::update()` uses `$order->cancel()` instead of inline stock restoration
 - `Category::loadAncestors()` allows eager loading parent chain for `path` accessor
 
 See [`CHANGELOG.md`](CHANGELOG.md) for full details.

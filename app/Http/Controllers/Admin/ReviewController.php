@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ReviewStatus;
 use App\Events\ClientNotificationBroadcast;
+use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Controller;
 use App\Models\ProductReview;
 use App\Models\UserActivityLog;
@@ -29,7 +31,11 @@ class ReviewController extends Controller
 
     public function approve(ProductReview $review)
     {
-        $review->update(['is_approved' => true]);
+        try {
+            $review->transitionStatus(ReviewStatus::Approved);
+        } catch (InvalidStateTransitionException $e) {
+            return back()->with('error', $e->getMessage());
+        }
         $review->load('product:id,name', 'user:id,name');
 
         UserActivityLog::record(auth()->id(), 'review_approved', "Review #{$review->id} approved");
@@ -41,12 +47,16 @@ class ReviewController extends Controller
             'status' => 'approved',
         ], $review->user_id));
 
-        return back();
+        return back()->with('success', 'Review approved');
     }
 
     public function reject(ProductReview $review)
     {
-        $review->update(['is_approved' => false]);
+        try {
+            $review->transitionStatus(ReviewStatus::Rejected);
+        } catch (InvalidStateTransitionException $e) {
+            return back()->with('error', $e->getMessage());
+        }
         $review->load('product:id,name', 'user:id,name');
 
         UserActivityLog::record(auth()->id(), 'review_rejected', "Review #{$review->id} rejected");
@@ -58,7 +68,7 @@ class ReviewController extends Controller
             'status' => 'rejected',
         ], $review->user_id));
 
-        return back();
+        return back()->with('success', 'Review rejected');
     }
 
     public function destroy(ProductReview $review)

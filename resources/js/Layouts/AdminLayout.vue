@@ -128,19 +128,30 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { usePermission } from '../composables/usePermission';
+import { useNotification } from '../composables/useNotification';
 import NotificationBell from '../components/NotificationBell.vue';
 import ThemeToggle from '../components/ThemeToggle.vue';
 import Notifications from '../components/Notifications.vue';
 import Dropdown from '../components/Dropdown.vue';
 
 const { can } = usePermission();
+const { error, success } = useNotification();
 
 const page = usePage();
 const url = computed(() => page.url || '');
 const mobileMenuOpen = ref(false);
+
+watch(() => page.props, (props) => {
+    if (props.flash?.error) {
+        error(props.flash.error);
+    }
+    if (props.flash?.success) {
+        success(props.flash.success);
+    }
+}, { deep: true, immediate: true });
 
 function logout() {
     router.post(route('logout'));

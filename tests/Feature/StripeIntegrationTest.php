@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PaymentStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -48,7 +49,7 @@ class StripeIntegrationTest extends TestCase
 
         $this->assertStringStartsWith('cs_test_', $payment->provider_session_id);
         $this->assertStringContainsString('checkout.stripe.com', $payment->provider_response['checkout_url']);
-        $this->assertEquals('pending', $payment->status);
+        $this->assertEquals('pending', $payment->status->value);
     }
 
     public function test_fallback_retrieve_session_returns_paid_status(): void
@@ -92,9 +93,9 @@ class StripeIntegrationTest extends TestCase
         $confirmResponse = $this->actingAs($user)->getJson("/api/payments/success?session_id={$sessionId}");
         $confirmResponse->assertStatus(200);
 
-        $this->assertEquals('paid', $order->fresh()->payment_status);
+        $this->assertEquals('paid', $order->fresh()->payment_status->value);
         $payment = Payment::where('provider_session_id', $sessionId)->first();
-        $this->assertEquals('paid', $payment->status);
+        $this->assertEquals('paid', $payment->status->value);
     }
 
     public function test_webhook_rejects_missing_signature(): void
@@ -120,7 +121,7 @@ class StripeIntegrationTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_session_id' => 'cs_test_webhook_123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $response = $this->postJson('/api/payments/webhook', [
@@ -129,7 +130,7 @@ class StripeIntegrationTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
-        $this->assertEquals('paid', $payment->fresh()->status);
-        $this->assertEquals('paid', $order->fresh()->payment_status);
+        $this->assertEquals('paid', $payment->fresh()->status->value);
+        $this->assertEquals('paid', $order->fresh()->payment_status->value);
     }
 }

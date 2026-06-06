@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\PaymentStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -135,7 +136,7 @@ class PaymentTest extends TestCase
         $product = Product::factory()->create(['price' => 100.00, 'stock' => 10, 'is_active' => true, 'category_id' => $this->category->id]);
         $order = Order::factory()->create([
             'user_id' => $user->id,
-            'payment_status' => 'unpaid',
+            'payment_status' => 'pending',
             'shipping_address' => '123 Main St',
             'total' => 100.00,
         ]);
@@ -153,7 +154,7 @@ class PaymentTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertEquals('pending', $order->fresh()->payment_status);
+        $this->assertEquals('pending', $order->fresh()->payment_status->value);
     }
 
     /**
@@ -189,7 +190,7 @@ class PaymentTest extends TestCase
 
         $payment = Payment::where('order_id', $order->id)->first();
         $this->assertNotNull($payment);
-        $this->assertEquals('pending', $payment->status);
+        $this->assertEquals('pending', $payment->status->value);
     }
 
     /**
@@ -440,7 +441,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_session_id' => 'cs_test_abc123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $response = $this->postJson('/api/payments/webhook', [
@@ -449,8 +450,8 @@ class PaymentTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
-        $this->assertEquals('paid', $payment->fresh()->status);
-        $this->assertEquals('paid', $order->fresh()->payment_status);
+        $this->assertEquals('paid', $payment->fresh()->status->value);
+        $this->assertEquals('paid', $order->fresh()->payment_status->value);
     }
 
     /**
@@ -480,7 +481,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_session_id' => 'cs_test_stock123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $this->postJson('/api/payments/webhook', [
@@ -518,7 +519,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_session_id' => 'cs_test_cart123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $response = $this->postJson('/api/payments/webhook', [
@@ -527,7 +528,7 @@ class PaymentTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
-        $this->assertEquals('paid', $payment = Payment::where('provider_session_id', 'cs_test_cart123')->first()->status);
+        $this->assertEquals('paid', Payment::where('provider_session_id', 'cs_test_cart123')->first()->status->value);
     }
 
     /**
@@ -557,7 +558,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_session_id' => 'cs_test_notify123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $this->postJson('/api/payments/webhook', [
@@ -590,7 +591,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_transaction_id' => 'pi_fail_123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $response = $this->postJson('/api/payments/webhook', [
@@ -599,8 +600,8 @@ class PaymentTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
-        $this->assertEquals('failed', $payment->fresh()->status);
-        $this->assertEquals('failed', $order->fresh()->payment_status);
+        $this->assertEquals('failed', $payment->fresh()->status->value);
+        $this->assertEquals('failed', $order->fresh()->payment_status->value);
     }
 
     /**
@@ -628,7 +629,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_transaction_id' => 'pi_restore_123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $this->postJson('/api/payments/webhook', [
@@ -679,7 +680,7 @@ class PaymentTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'stripe',
             'provider_session_id' => 'cs_test_success_123',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $response = $this->actingAs($user)->getJson('/api/payments/success?session_id=cs_test_success_123');
@@ -690,8 +691,8 @@ class PaymentTest extends TestCase
             'payment',
             'message',
         ]);
-        $this->assertEquals('paid', $payment->fresh()->status);
-        $this->assertEquals('paid', $order->fresh()->payment_status);
+        $this->assertEquals('paid', $payment->fresh()->status->value);
+        $this->assertEquals('paid', $order->fresh()->payment_status->value);
         $this->assertEquals(10, $product->fresh()->stock);
     }
 
@@ -750,7 +751,7 @@ class PaymentTest extends TestCase
         Payment::create([
             'order_id' => $order->id,
             'provider' => 'stripe',
-            'status' => Payment::STATUS_FAILED,
+            'status' => PaymentStatus::Failed,
             'attempts' => 1,
         ]);
 
@@ -778,7 +779,7 @@ class PaymentTest extends TestCase
         Payment::create([
             'order_id' => $order->id,
             'provider' => 'stripe',
-            'status' => Payment::STATUS_FAILED,
+            'status' => PaymentStatus::Failed,
             'attempts' => 3,
         ]);
 
@@ -815,7 +816,7 @@ class PaymentTest extends TestCase
         $originalPayment = Payment::create([
             'order_id' => $order->id,
             'provider' => 'stripe',
-            'status' => Payment::STATUS_FAILED,
+            'status' => PaymentStatus::Failed,
             'attempts' => 1,
         ]);
 
@@ -843,7 +844,7 @@ class PaymentTest extends TestCase
         Payment::create([
             'order_id' => $order->id,
             'provider' => 'stripe',
-            'status' => Payment::STATUS_EXPIRED,
+            'status' => PaymentStatus::Expired,
             'expires_at' => now()->subHour(),
         ]);
 

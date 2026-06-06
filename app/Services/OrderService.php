@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Events\ClientNotificationBroadcast;
 use App\Models\Address;
 use App\Models\AdminNotification;
@@ -72,7 +74,7 @@ class OrderService
             $order = Order::create([
                 'order_number' => $orderNumber,
                 'user_id' => $user?->id,
-                'status' => Order::STATUS_PENDING,
+                'status' => OrderStatus::Pending,
                 'subtotal' => $recalculatedSubtotal,
                 'tax' => $tax,
                 'shipping' => $shipping,
@@ -87,7 +89,7 @@ class OrderService
                 'shipping_country' => $validated['country'],
                 'shipping_phone' => $validated['phone'],
                 'payment_method' => $validated['payment_method'],
-                'payment_status' => Order::PAYMENT_PENDING,
+                'payment_status' => PaymentStatus::Pending,
             ]);
 
             foreach ($orderItems as $orderItem) {

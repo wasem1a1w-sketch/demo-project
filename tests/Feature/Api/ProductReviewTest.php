@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\ReviewStatus;
 use App\Models\AdminNotification;
 use App\Models\Category;
 use App\Models\Product;
@@ -88,7 +89,7 @@ class ProductReviewTest extends TestCase
             'title' => 'Visible',
         ]);
 
-        ProductReview::where('title', 'Visible')->update(['is_approved' => true]);
+        ProductReview::where('title', 'Visible')->update(['status' => ReviewStatus::Approved]);
 
         $this->actingAs($user2)->postJson("/api/products/{$product->id}/reviews", [
             'rating' => 3,
@@ -269,12 +270,12 @@ class ProductReviewTest extends TestCase
         $this->actingAs($user)->postJson("/api/products/{$product->id}/reviews", [
             'rating' => 4,
         ]);
-        ProductReview::where('product_id', $product->id)->update(['is_approved' => true]);
+        ProductReview::where('product_id', $product->id)->update(['status' => ReviewStatus::Approved]);
 
         $this->actingAs($user)->postJson("/api/products/{$product2->id}/reviews", [
             'rating' => 5,
         ]);
-        ProductReview::where('product_id', $product2->id)->update(['is_approved' => true]);
+        ProductReview::where('product_id', $product2->id)->update(['status' => ReviewStatus::Approved]);
 
         $response = $this->getJson('/api/products');
 
@@ -296,7 +297,7 @@ class ProductReviewTest extends TestCase
         $this->actingAs($user)->postJson("/api/products/{$product->id}/reviews", [
             'rating' => 5,
         ]);
-        ProductReview::where('product_id', $product->id)->update(['is_approved' => true]);
+        ProductReview::where('product_id', $product->id)->update(['status' => ReviewStatus::Approved]);
 
         $response = $this->getJson("/api/products/{$product->slug}");
 

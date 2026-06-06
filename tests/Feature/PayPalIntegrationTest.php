@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -49,7 +51,7 @@ class PayPalIntegrationTest extends TestCase
 
         $this->assertStringStartsWith('PAYPALID_', $payment->provider_session_id);
         $this->assertStringContainsString('paypal.com', $payment->provider_response['checkout_url']);
-        $this->assertEquals('pending', $payment->status);
+        $this->assertEquals('pending', $payment->status->value);
         $this->assertEquals('paypal', $payment->provider);
     }
 
@@ -95,9 +97,9 @@ class PayPalIntegrationTest extends TestCase
         $captureResponse = $this->actingAs($user)->get("/api/payments/paypal/capture?token={$sessionId}");
         $captureResponse->assertStatus(302);
 
-        $this->assertEquals('paid', $order->fresh()->payment_status);
+        $this->assertEquals('paid', $order->fresh()->payment_status->value);
         $payment = Payment::where('provider_session_id', $sessionId)->first();
-        $this->assertEquals('paid', $payment->status);
+        $this->assertEquals('paid', $payment->status->value);
     }
 
     public function test_paypal_cancel_marks_payment_expired(): void
@@ -124,14 +126,14 @@ class PayPalIntegrationTest extends TestCase
             'order_id' => $order->id,
             'provider' => 'paypal',
             'provider_session_id' => 'PAYPALID_cancel_test',
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
         ]);
 
         $response = $this->actingAs($user)->get('/api/payments/paypal/cancel?token=PAYPALID_cancel_test');
 
         $response->assertStatus(302);
-        $this->assertEquals('expired', $payment->fresh()->status);
-        $this->assertEquals(Order::STATUS_CANCELLED, $order->fresh()->status);
+        $this->assertEquals('expired', $payment->fresh()->status->value);
+        $this->assertEquals(OrderStatus::Cancelled, $order->fresh()->status);
         $this->assertEquals(6, $product->fresh()->stock);
     }
 }

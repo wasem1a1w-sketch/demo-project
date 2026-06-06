@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Setting;
@@ -17,29 +19,29 @@ class PaymentService
     public function processCheckout(Order $order, string $provider = 'stripe'): Payment
     {
         $existingPending = Payment::where('order_id', $order->id)
-            ->where('status', Payment::STATUS_PENDING)
+            ->where('status', PaymentStatus::Pending)
             ->first();
 
         if ($existingPending) {
-            $existingPending->update(['status' => Payment::STATUS_EXPIRED]);
+            $existingPending->transitionStatus(PaymentStatus::Expired);
         }
 
         $payment = Payment::create([
             'order_id' => $order->id,
             'provider' => $provider,
-            'status' => Payment::STATUS_PENDING,
+            'status' => PaymentStatus::Pending,
             'attempts' => 0,
         ]);
 
-        $order->update(['payment_status' => 'pending']);
+        $order->update(['payment_status' => PaymentStatus::Pending]);
 
         try {
             $sessionData = $provider === 'paypal'
                 ? $this->createPayPalOrder($order)
                 : $this->createStripeSession($order);
         } catch (\RuntimeException $e) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $order->update(['payment_status' => 'failed']);
+            $payment->transitionStatus(PaymentStatus::Failed);
+            $order->update(['payment_status' => PaymentStatus::Failed]);
             throw $e;
         }
 
@@ -58,27 +60,25 @@ class PaymentService
         }
 
         $payment->increment('attempts');
-        $payment->update(['status' => Payment::STATUS_PENDING]);
-        $order->update(['payment_status' => 'pending']);
+        $payment->transitionStatus(PaymentStatus::Pending);
+        $order->update(['payment_status' => PaymentStatus::Pending]);
 
         try {
             return $provider === 'paypal'
                 ? $this->createPayPalOrder($order)
                 : $this->createStripeSession($order);
         } catch (\RuntimeException $e) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $order->update(['payment_status' => 'failed']);
+            $payment->transitionStatus(PaymentStatus::Failed);
+            $order->update(['payment_status' => PaymentStatus::Failed]);
             throw $e;
         }
     }
 
     public function confirmPayment(Payment $payment, array $sessionData): Payment
     {
-        $payment->update([
-            'status' => Payment::STATUS_PAID,
-            'provider_response' => $sessionData,
-        ]);
-        $payment->order->update(['payment_status' => 'paid']);
+        $payment->transitionStatus(PaymentStatus::Paid);
+        $payment->update(['provider_response' => $sessionData]);
+        $payment->order->update(['payment_status' => PaymentStatus::Paid]);
 
         if ($payment->order->user) {
             $payment->order->user->notify(new OrderConfirmation($payment->order));
@@ -110,8 +110,8 @@ class PaymentService
             ->first();
 
         if ($payment && !$payment->isFailed()) {
-            $payment->update(['status' => Payment::STATUS_FAILED]);
-            $payment->order->update(['payment_status' => 'failed']);
+            $payment->transitionStatus(PaymentStatus::Failed);
+            $payment->order->update(['payment_status' => PaymentStatus::Failed]);
             $payment->order->cancel();
         }
     }
@@ -119,15 +119,15 @@ class PaymentService
     public function isOrderAlreadyPaid(Order $order): bool
     {
         return Payment::where('order_id', $order->id)
-            ->where('status', Payment::STATUS_PAID)
-            ->exists() || $order->payment_status === 'paid';
+            ->where('status', PaymentStatus::Paid)
+            ->exists() || $order->payment_status === PaymentStatus::Paid;
     }
 
     public function isOrderExpired(Order $order): bool
     {
         return Payment::where('order_id', $order->id)
-            ->where('status', Payment::STATUS_EXPIRED)
-            ->exists() || $order->payment_status === 'expired';
+            ->where('status', PaymentStatus::Expired)
+            ->exists() || $order->payment_status === PaymentStatus::Expired;
     }
 
     public function validateItemStock(Order $order): ?string
@@ -147,22 +147,20 @@ class PaymentService
         if ($status === 'COMPLETED') {
             $captureId = $captureData['purchase_units'][0]['payments']['captures'][0]['id'] ?? null;
 
+            $payment->transitionStatus(PaymentStatus::Paid);
             $payment->update([
-                'status' => Payment::STATUS_PAID,
                 'provider_transaction_id' => $captureId,
                 'provider_response' => $captureData,
             ]);
-            $payment->order->update(['payment_status' => 'paid']);
+            $payment->order->update(['payment_status' => PaymentStatus::Paid]);
 
             if ($payment->order->user) {
                 $payment->order->user->notify(new OrderConfirmation($payment->order));
             }
         } else {
-            $payment->update([
-                'status' => Payment::STATUS_FAILED,
-                'provider_response' => $captureData,
-            ]);
-            $payment->order->update(['payment_status' => 'failed']);
+            $payment->transitionStatus(PaymentStatus::Failed);
+            $payment->update(['provider_response' => $captureData]);
+            $payment->order->update(['payment_status' => PaymentStatus::Failed]);
         }
     }
 
@@ -175,7 +173,7 @@ class PaymentService
             ->first();
 
         if ($payment && !$payment->isPaid()) {
-            $payment->update(['status' => Payment::STATUS_EXPIRED]);
+            $payment->transitionStatus(PaymentStatus::Expired);
             $payment->order->cancel();
         }
     }

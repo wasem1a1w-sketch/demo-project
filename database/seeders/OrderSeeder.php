@@ -2,7 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Order;
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -26,7 +27,7 @@ class OrderSeeder extends Seeder
             return;
         }
 
-        $statuses = [Order::STATUS_PENDING, Order::STATUS_PROCESSING, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_CANCELLED];
+        $statuses = [OrderStatus::Pending, OrderStatus::Processing, OrderStatus::Shipped, OrderStatus::Delivered, OrderStatus::Cancelled];
         $statusWeights = [20, 25, 25, 20, 10];
         $statusPool = [];
         foreach ($statuses as $i => $status) {
@@ -68,9 +69,9 @@ class OrderSeeder extends Seeder
             $status = $statusPool[array_rand($statusPool)];
 
             $paymentStatus = match ($status) {
-                Order::STATUS_PENDING => rand(0, 2) ? Order::PAYMENT_PENDING : Order::PAYMENT_FAILED,
-                Order::STATUS_CANCELLED => rand(0, 1) ? Order::PAYMENT_FAILED : Order::PAYMENT_REFUNDED,
-                default => Order::PAYMENT_PAID,
+                OrderStatus::Pending => rand(0, 2) ? PaymentStatus::Pending : PaymentStatus::Failed,
+                OrderStatus::Cancelled => rand(0, 1) ? PaymentStatus::Failed : PaymentStatus::Refunded,
+                default => PaymentStatus::Paid,
             };
 
             $createdAt = fake()->dateTimeBetween('-60 days', 'now');

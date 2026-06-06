@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Events\ClientNotificationBroadcast;
+use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrderStatusRequest;
 use App\Models\AdminNotification;
@@ -36,41 +38,46 @@ class OrderController extends Controller
         $order = Order::findOrFail($id);
         $validated = $request->validated();
 
-        $originalStatus = $order->status;
-        $originalPaymentStatus = $order->payment_status;
+        $originalStatus = $order->status?->value;
+        $originalPaymentStatus = $order->payment_status?->value;
 
-        $order->update($validated);
+        $newStatus = OrderStatus::from($validated['status']);
+        $newPaymentStatus = \App\Enums\PaymentStatus::from($validated['payment_status']);
 
-        if ($originalStatus !== $validated['status']) {
-            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} -> {$validated['status']}");
+        if ($originalStatus !== $newStatus->value) {
+            try {
+                $order->transitionStatus($newStatus);
+            } catch (InvalidStateTransitionException $e) {
+                return back()->with('error', $e->getMessage());
+            }
+
+            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} -> {$newStatus->value}");
             AdminNotification::notify('order_status_changed', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
                 'old_status' => $originalStatus,
-                'new_status' => $validated['status'],
-                'message' => "Order #{$order->order_number} is now {$validated['status']}",
+                'new_status' => $newStatus->value,
+                'message' => "Order #{$order->order_number} is now {$newStatus->label()}",
             ]);
 
             if ($order->user) {
-                $order->user->notify(new OrderStatusChanged($order, $originalStatus, $validated['status']));
+                $order->user->notify(new OrderStatusChanged($order, $originalStatus, $newStatus->value));
                 broadcast(new ClientNotificationBroadcast('order_status_changed', [
                     'order_number' => $order->order_number,
                     'order_id' => $order->id,
                     'old_status' => $originalStatus,
-                    'new_status' => $validated['status'],
-                    'message' => "Order #{$order->order_number} is now {$validated['status']}",
+                    'new_status' => $newStatus->value,
+                    'message' => "Order #{$order->order_number} is now {$newStatus->label()}",
                 ], $order->user->id));
             }
         }
 
-        if ($originalPaymentStatus !== $validated['payment_status']) {
-            UserActivityLog::record(auth()->id(), 'order_payment_changed', "Order #{$order->order_number} payment changed: {$originalPaymentStatus} -> {$validated['payment_status']}");
+        if ($originalPaymentStatus !== $newPaymentStatus->value) {
+            $order->update(['payment_status' => $newPaymentStatus]);
+
+            UserActivityLog::record(auth()->id(), 'order_payment_changed', "Order #{$order->order_number} payment changed: {$originalPaymentStatus} -> {$newPaymentStatus->value}");
         }
 
-        if ($validated['status'] === 'cancelled' && $originalStatus !== 'cancelled') {
-            $order->cancel();
-        }
-
-        return back();
+        return back()->with('success', 'Order updated');
     }
 }

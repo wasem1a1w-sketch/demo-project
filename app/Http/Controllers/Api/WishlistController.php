@@ -72,7 +72,7 @@ class WishlistController extends Controller
     private function getWishlist()
     {
         return WishlistItem::where('user_id', auth()->id())
-            ->with(['product.primaryImage', 'product.reviews' => fn ($q) => $q->where('is_approved', true)])
+            ->with(['product.primaryImage', 'product.reviews' => fn ($q) => $q->where('status', \App\Enums\ReviewStatus::Approved)])
             ->latest()
             ->get()
             ->map(function ($item) {
