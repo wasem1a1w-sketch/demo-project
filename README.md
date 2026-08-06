@@ -49,6 +49,7 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 | Charts | ApexCharts |
 | RBAC | Spatie Laravel Permission |
 | Image Processing | Imagick (WebP) |
+| Monitoring | Laravel Pulse |
 
 ---
 
@@ -89,6 +90,8 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 - **Review Moderation** — list all reviews, approve/reject/delete with real-time user notification
 - **Settings Management** — manage shipping rate, free shipping threshold, tax rate, Stripe/PayPal credentials
 - **Activity Log Viewer** — filterable audit trail (25+ event types, date range, paginated 50/page)
+- **Monitoring (Laravel Pulse)** — real-time dashboards at `/pulse` (servers, requests, slow queries, exceptions, queues, cache) with user-selectable period filter (1h / 6h / 24h / 7d)
+- **Exception Viewer** — every reported exception is auto-captured with its full stack trace, request context, affected user, and environment; filterable admin page with expandable traces and copy-to-clipboard
 - **Admin Notification Center** — separate system from user notifications, real-time via Reverb on private admin channel
 
 ### Platform-wide
@@ -98,6 +101,7 @@ A full-stack e-commerce application built with Laravel, Inertia, and Vue. Featur
 - **Role-Based Access Control** — Spatie Laravel Permission with 30+ granular permissions per module
 - **Stock Tracking** — auto decrement on order placement, restore on cancellation/failure
 - **Activity Logging** — 25+ event types across all features (user_id, type, description, IP, user agent)
+- **Exception Capture** — `reportable()` hook stores all exceptions (class, message, stack trace, file:line, method/URL/IP, user, environment) in an `exceptions` table; pruned weekly via `exceptions:prune`
 - **Image Processing** — Imagick WebP conversion, 3 sizes (original 1920px max, thumbnail 400x400, icon 100x100), 3MB limit
 - **Responsive Design** — mobile-friendly via Tailwind CSS
 - **Theme Support** — dark/light mode toggle, system preference detection, localStorage persistence
@@ -186,6 +190,61 @@ php artisan notify:test 2 --admin
 ```
 
 Replace `2` with the target user's ID.
+
+---
+
+## Monitoring & Observability
+
+The project uses **Laravel Pulse** for real-time application monitoring, plus a custom exception tracker with an admin viewer.
+
+### Laravel Pulse
+
+- **Dashboard** — `/pulse` (requires `admin.access`), showing servers (CPU/memory/storage), application usage, queues, cache, slow queries, exceptions, slow requests/jobs/outgoing requests
+- **Storage** — database driver (`pulse_entries` / `pulse_aggregates` tables, installed by `php artisan migrate`)
+- **Data collection** — `pulse:check` runs every minute via the scheduler in `routes/console.php`; Docker starts `php artisan schedule:work` automatically
+- **Period filter** — user-selectable **1h / 6h / 24h / 7d** via the header tabs (native Pulse default is 1h)
+
+```bash
+php artisan pulse:check        # run aggregation manually
+php artisan pulse:clear --force # wipe all captured Pulse data
+```
+
+### Slow-Query Demo
+
+The admin dashboard normally runs fast, indexed queries. To generate **real** slow queries for Pulse, set:
+
+```env
+SLOW_DEMO=true
+```
+
+When enabled, the dashboard runs three realistically poorly-written queries against `user_activity_logs` (e.g. `ORDER BY RAND()`, `GROUP BY SUBSTRING(...)`, `REGEXP ... LIKE '%bot%'`), so Pulse records genuine `slow_query` entries with file:line locations. Seed ~500k rows to make them slow:
+
+```bash
+php artisan db:seed --class=SlowDemoSeeder --force   # 500k rows (configurable via SLOW_DEMO_ROWS)
+```
+
+Seeded rows are tagged `data.demo=true` and can be removed afterwards:
+
+```sql
+DELETE FROM user_activity_logs WHERE JSON_EXTRACT(data, "$.demo") = true;
+```
+
+### Exception Tracking
+
+Every reported exception (HTTP requests, queue jobs, console commands) is captured into an `exceptions` table via a `reportable()` hook (`app/Services/ExceptionTracker.php`):
+
+- Full stack trace (50 frames), file:line, full message
+- Request context: method, URL, IP
+- Authenticated user and environment
+- Capture is crash-safe (re-entrancy guard + silent failure) — it can never break the app
+
+**Admin Exceptions page** — `/admin/exceptions` (requires `exceptions.read` permission): search, class filter, date range, paginated table, and a detail modal with the full message, request context, user, and stack trace (copy-to-clipboard). A **"Throw test exception"** button records a demo exception on demand.
+
+**Pruning** — `exceptions:prune {--days=30}` deletes records older than N days (default 30) and is scheduled weekly.
+
+```bash
+php artisan exceptions:prune --days=30
+```
 
 ---
 
@@ -310,6 +369,10 @@ The Docker setup uses **FrankenPHP** — a modern PHP application server built o
 | `STRIPE_SECRET` | Stripe secret key | — |
 | `PAYPAL_CLIENT_ID` | PayPal client ID | — |
 | `PAYPAL_SECRET` | PayPal secret | — |
+| `SLOW_DEMO` | Run demo slow queries on the admin dashboard for Pulse | `false` |
+| `SLOW_DEMO_ROWS` | Target row count for `SlowDemoSeeder` | `500000` |
+| `PULSE_ENABLED` | Master switch for all Pulse recorders | `true` |
+| `PULSE_PATH` | Pulse dashboard path | `pulse` |
 
 ---
 

@@ -1,5 +1,34 @@
 # Changelog - Controller Refactoring
 
+## Monitoring & Observability (Aug 2026)
+
+### Laravel Pulse
+
+- Installed `laravel/pulse` with database storage (`pulse_entries`, `pulse_aggregates`, `pulse_values` tables via `2026_08_06_065119_create_pulse_tables.php`)
+- Dashboard at `/pulse`, gated behind `admin.access` via the `Authorize` middleware + `Gate::define('viewPulse')`
+- `pulse:check` scheduled every minute in `routes/console.php`; Docker starts the scheduler via `schedule:work`
+- **Period filter fix** — removed the `SetPulseDefaultPeriod` middleware that forced `?period=24_hours`. Pulse's native UI represents **1h** by omitting the `period` param, so the middleware hijacked the 1h choice and snapped it back to 24h. With it gone, all four filters (1h / 6h / 24h / 7d) are selectable and the default is Pulse's native 1h. This also removed the Livewire reload-loop surface (the middleware previously ran as a Livewire persistent middleware on update requests).
+
+### Slow-Query Demo
+
+- `database/seeders/SlowDemoSeeder.php` — idempotent seeder targeting `SLOW_DEMO_ROWS` (default 500k) realistic rows in `user_activity_logs`, tagged `data.demo=true` for easy cleanup
+- `AdminController::runSlowDemoQueries()` — when `SLOW_DEMO=true`, the admin dashboard runs three realistically badly-written queries (`ORDER BY RAND()`, `GROUP BY SUBSTRING(description,1,25)`, `description REGEXP ... AND user_agent LIKE '%bot%'`) so Pulse captures genuine `slow_query` entries (~1.3–2.6s each at 500k rows)
+- Toggle via `SLOW_DEMO` env (default `false`); cleanup with `DELETE FROM user_activity_logs WHERE JSON_EXTRACT(data, "$.demo") = true;`
+
+### Exception Tracking
+
+- **Capture** — `app/Services/ExceptionTracker.php` registered as a `reportable()` hook in `AppServiceProvider`. Stores every reported exception (HTTP, queue, console): class, full message, 50-frame stack trace, file:line, request method/URL/IP, user ID, environment. Re-entrancy guard + silent failure means capture can never break or recurse the app
+- **Schema** — `exceptions` table via `2026_08_06_140000_create_exceptions_table.php` (indexed on class + created_at, FK to users)
+- **Admin page** — `/admin/exceptions` (Inertia/Vue, permission `exceptions.read`): search, class filter, date range, pagination; detail modal with expandable stack trace + copy-to-clipboard; "Throw test exception" button records a demo exception
+- **Prune** — `app/Console/Commands/PruneExceptions.php` (`exceptions:prune --days=30`), scheduled weekly
+- Published `config/inertia.php` with the correct `resources/js/Pages` path so `assertInertia` page-existence checks pass
+
+### Migration Note
+
+Run `php artisan migrate` — adds the Pulse tables and the `exceptions` table. No data migration for existing rows.
+
+---
+
 ## FormRequest Validation Extraction
 
 All inline `$request->validate([...])` calls extracted to dedicated FormRequest classes in `app/Http/Requests/`.
