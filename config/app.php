@@ -84,6 +84,8 @@ return [
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
+    'slow_demo' => env('SLOW_DEMO', false),
+
     /*
     |--------------------------------------------------------------------------
     | Encryption Key

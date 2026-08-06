@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminController extends Controller
@@ -53,6 +54,8 @@ class AdminController extends Controller
             ? Order::with('user:id,name')->orderByDesc('id')->limit(10)->get()
             : [];
 
+        $this->runSlowDemoQueries();
+
         return Inertia::render('Admin/Dashboard', [
             'stats' => $stats,
             'recentOrders' => $recentOrders,
@@ -61,5 +64,32 @@ class AdminController extends Controller
             'revenueChartLabels' => $chartLabels,
             'revenueChartSeries' => $revenueChartSeries,
         ]);
+    }
+
+    private function runSlowDemoQueries(): void
+    {
+        if (! config('app.slow_demo')) {
+            return;
+        }
+
+        DB::table('user_activity_logs')
+            ->orderByRaw('RAND()')
+            ->limit(100)
+            ->get();
+
+        DB::table('user_activity_logs')
+            ->selectRaw('SUBSTRING(description, 1, 25) AS phrase, COUNT(*) AS total')
+            ->groupByRaw('SUBSTRING(description, 1, 25)')
+            ->orderByRaw('COUNT(*) DESC')
+            ->limit(500)
+            ->get();
+
+        DB::table('user_activity_logs')
+            ->whereRaw('description REGEXP "[0-9]{4}" AND user_agent LIKE "%bot%"')
+            ->selectRaw('DATE(created_at) AS day, COUNT(*) AS total')
+            ->groupByRaw('DATE(created_at)')
+            ->orderByRaw('COUNT(*) DESC')
+            ->limit(200)
+            ->get();
     }
 }

@@ -104,6 +104,11 @@ php artisan reverb:start --host=0.0.0.0 --port=8081 &
 # 9. Sanity check permissions for runtime uploads and caches
 chown -R www-data:www-data /app/storage /app/bootstrap/cache /app/public
 
-# 10. Hand off execution control to FrankenPHP
+# 10. Run the Laravel scheduler (Pulse aggregation and other scheduled tasks)
+echo "Starting Laravel scheduler..."
+su -s /bin/sh www-data -c "php artisan schedule:work > /dev/null 2>&1" &
+disown || true
+
+# 11. Hand off execution control to FrankenPHP
 echo "Starting FrankenPHP web server..."
 exec su -s /bin/sh www-data -c "/usr/local/bin/frankenphp run --config /etc/caddy/Caddyfile"

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ActivityLogController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\CouponController;
+use App\Http\Controllers\Admin\ExceptionController;
 use App\Http\Controllers\Admin\NotificationController as AdminNotificationController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
@@ -114,6 +115,20 @@ Route::middleware(['auth', AdminOnly::class])->group(function () {
         ->can('activity-logs.read');
     Route::get('/admin/activity-logs/data', [ActivityLogController::class, 'getLogs'])
         ->can('activity-logs.read');
+
+    // Exceptions
+    Route::get('/admin/exceptions', [ExceptionController::class, 'index'])
+        ->name('admin.exceptions')
+        ->can('exceptions.read');
+    Route::get('/admin/exceptions/data', [ExceptionController::class, 'getExceptions'])
+        ->name('admin.exceptions.data')
+        ->can('exceptions.read');
+    Route::get('/admin/exceptions/{exception}', [ExceptionController::class, 'show'])
+        ->name('admin.exceptions.show')
+        ->can('exceptions.read');
+    Route::post('/admin/exceptions/test', [ExceptionController::class, 'test'])
+        ->name('admin.exceptions.test')
+        ->can('exceptions.read');
 
     // Settings
     Route::get('/admin/settings', [AdminSettingsController::class, 'index'])

@@ -45,6 +45,7 @@ class RoleAndPermissionSeeder extends Seeder
             'coupons.update',
             'coupons.delete',
             'activity-logs.read',
+            'exceptions.read',
         ];
 
         foreach ($permissions as $permission) {

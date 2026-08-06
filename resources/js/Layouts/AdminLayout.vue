@@ -31,11 +31,13 @@
                                 </template>
                             </Dropdown>
                             
-                            <Dropdown v-if="can('users.read')" :active="url.startsWith('/admin/users') || url.startsWith('/admin/activity-logs')">
+                            <Dropdown v-if="can('users.read')" :active="url.startsWith('/admin/users') || url.startsWith('/admin/activity-logs') || url.startsWith('/admin/exceptions')">
                                 <template #trigger>Users</template>
                                 <template #content>
                                     <Link :href="route('admin.users')" class="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="url.startsWith('/admin/users') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'">Users</Link>
                                     <Link v-if="can('admin.access')" :href="route('admin.activity-logs')" class="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="url.startsWith('/admin/activity-logs') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'">Activity Logs</Link>
+                                    <Link v-if="can('exceptions.read')" :href="route('admin.exceptions')" class="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="url.startsWith('/admin/exceptions') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'">Exceptions</Link>
+                                    <Link v-if="can('admin.access')" href="/pulse" class="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50" :class="url.startsWith('/pulse') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'">Pulse</Link>
                                 </template>
                             </Dropdown>
                         </nav>
@@ -102,6 +104,12 @@
                                 </Link>
                                 <Link v-if="can('admin.access')" :href="route('admin.activity-logs')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/activity-logs') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
                                     <span class="ml-7">Activity Logs</span>
+                                </Link>
+                                <Link v-if="can('exceptions.read')" :href="route('admin.exceptions')" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/admin/exceptions') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                                    <span class="ml-7">Exceptions</span>
+                                </Link>
+                                <Link v-if="can('admin.access')" href="/pulse" class="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors" :class="url.startsWith('/pulse') ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'" @click="mobileMenuOpen = false">
+                                    <span class="ml-7">Pulse</span>
                                 </Link>
                             </div>
                         </nav>
