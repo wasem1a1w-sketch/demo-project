@@ -6,11 +6,13 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class RateLimitingTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
@@ -18,6 +20,7 @@ class RateLimitingTest extends TestCase
     {
         parent::setUp();
 
+        $this->fakeKafka();
         $this->category = Category::factory()->create(['is_active' => true]);
 
         Role::firstOrCreate(['name' => 'client', 'guard_name' => 'web']);

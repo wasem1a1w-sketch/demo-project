@@ -3,14 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
-use App\Events\ClientNotificationBroadcast;
 use App\Exceptions\InvalidStateTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrderStatusRequest;
-use App\Models\AdminNotification;
 use App\Models\Order;
 use App\Models\UserActivityLog;
-use App\Notifications\OrderStatusChanged;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -46,29 +43,9 @@ class OrderController extends Controller
 
         if ($originalStatus !== $newStatus->value) {
             try {
-                $order->transitionStatus($newStatus);
+                $order->transitionStatus($newStatus, auth()->id());
             } catch (InvalidStateTransitionException $e) {
                 return back()->with('error', $e->getMessage());
-            }
-
-            UserActivityLog::record(auth()->id(), 'order_status_changed', "Order #{$order->order_number} status changed: {$originalStatus} -> {$newStatus->value}");
-            AdminNotification::notify('order_status_changed', [
-                'order_id' => $order->id,
-                'order_number' => $order->order_number,
-                'old_status' => $originalStatus,
-                'new_status' => $newStatus->value,
-                'message' => "Order #{$order->order_number} is now {$newStatus->label()}",
-            ]);
-
-            if ($order->user) {
-                $order->user->notify(new OrderStatusChanged($order, $originalStatus, $newStatus->value));
-                broadcast(new ClientNotificationBroadcast('order_status_changed', [
-                    'order_number' => $order->order_number,
-                    'order_id' => $order->id,
-                    'old_status' => $originalStatus,
-                    'new_status' => $newStatus->value,
-                    'message' => "Order #{$order->order_number} is now {$newStatus->label()}",
-                ], $order->user->id));
             }
         }
 

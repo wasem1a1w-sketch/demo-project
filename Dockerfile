@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libmagickwand-dev \
     libwebp-dev \
+    librdkafka-dev \
     && docker-php-ext-install \
         pdo_mysql \
         mbstring \
@@ -28,6 +29,8 @@ RUN apt-get update && apt-get install -y \
         bcmath \
     && pecl install imagick \
     && docker-php-ext-enable imagick \
+    && pecl install rdkafka \
+    && docker-php-ext-enable rdkafka \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

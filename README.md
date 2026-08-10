@@ -248,6 +248,90 @@ php artisan exceptions:prune --days=30
 
 ---
 
+## Kafka Event Streaming
+
+Async event streaming via Apache Kafka (`mateusjunges/laravel-kafka`). Producers publish to topics; long-running consumer workers (`kafka:consume`) process them asynchronously. Each event is an `App\Kafka\EventEnvelope`:
+
+```json
+{
+  "event_type": "payment.confirmed",
+  "event_id": "<uuid>",
+  "occurred_at": "2026-08-10T10:00:00+00:00",
+  "key": "<partition-key>",
+  "data": { "...": "..." }
+}
+```
+
+`event_id` (UUID) enables idempotent processing; `key` controls partitioning (per-user, per-order, per-session).
+
+### Transactional Outbox
+
+Producers never publish to Kafka directly. Instead they write an event envelope to the **`outbox_messages`** table (`App\Kafka\Outbox::record()`) **inside the same DB transaction** as the business change, and a dispatcher ships pending rows to Kafka:
+
+- If the DB transaction rolls back, the outbox row rolls back too — no ghost events.
+- If the DB commits but Kafka is down, the row stays `pending` in MySQL and is delivered on a later run — no lost events, full paper trail.
+- `outbox:dispatch` is scheduled **every minute** (`routes/console.php`, `withoutOverlapping`); it claims each row (compare-and-set, so concurrent workers never double-send), publishes via `KafkaEventPublisher`, and marks it `sent`.
+- A failed send increments `attempts` and backs off exponentially (`available_at = now + 2^(attempts-1) min`, capped at 30 min). After 5 attempts the row is left permanently `failed` for manual review.
+
+```bash
+php artisan outbox:dispatch                 # deliver pending rows now
+php artisan outbox:dispatch --limit=1000    # cap the batch size
+```
+
+### Topics (`app/Kafka/KafkaTopics.php`)
+
+| Topic | Produced by | Consumed by |
+|---|---|---|
+| `user-activity-logs` | `UserActivityLog::record()` | `ActivityLogHandler` → `UserActivityLog::persist()` |
+| `order-events` | `OrderService::placeOrder()`, `Order::transitionStatus()` | `OrderNotificationsHandler` (emails + broadcasts), `OrderAnalyticsHandler` (activity rows) |
+| `payment-events` | `PaymentController@handleWebhook` | `PaymentEventProcessor` |
+| `payment-events-retry` | `PaymentEventProcessor` (transient failures) | `PaymentEventProcessor` |
+| `payment-events-dlq` | `PaymentEventProcessor` (dead letter queue) | none (manual inspection) |
+
+The first three rows are recorded via the transactional outbox. The `-retry`/`-dlq` topics are published directly by `PaymentEventProcessor` (already async at-least-once via offset commits); delivery is handled by `App\Kafka\KafkaEventPublisher`.
+
+### Consumers
+
+Run one worker per topic group (production: via Supervisor / process manager). Workers commit offsets manually (at-least-once):
+
+```bash
+php artisan kafka:consume activity-logs
+php artisan kafka:consume order-notifications
+php artisan kafka:consume order-analytics
+php artisan kafka:consume payments        # payment-events + payment-events-retry
+```
+
+### Payment idempotency & retry
+
+`PaymentEventProcessor` records `event_id` in the `processed_payment_events` table before processing (idempotency), and releases the claim on failure. Transient failures are re-published to `payment-events-retry` with an incremented `attempts` counter; after 3 attempts the event goes to `payment-events-dlq` for manual review.
+
+### Local setup
+
+```bash
+# 1. Start Kafka + Kafka UI (Kafka UI at http://localhost:8082)
+sudo docker compose up -d kafka kafka-ui
+
+# 2. Publish a test event / list topics
+php artisan kafka:produce --topic=user-activity-logs
+```
+
+Environment variables:
+
+| Variable | Description | Default |
+|---|---|---|
+| `KAFKA_BROKERS` | Comma-separated broker addresses | `localhost:9092` |
+| `KAFKA_CONSUMER_GROUP_ID` | Default consumer group | `app-default` |
+| `KAFKA_OFFSET_RESET` | Offset policy for new groups | `earliest` |
+| `KAFKA_AUTO_COMMIT` | Auto-commit offsets | `false` |
+
+> Note: the Kafka producer/consumer path requires the `rdkafka` PHP extension. In this repo it is built into `~/.local`; use the `bin/php` wrapper so `php artisan`, `php composer`, and `php vendor/bin/phpunit` resolve it.
+
+### Testing
+
+Feature tests never touch a real broker. Producers record into the outbox table, so tests call `dispatchOutbox()` to deliver pending rows to the faked broker (`Kafka::fake()`), then the `Tests\Support\InteractsWithKafka` trait routes captured messages through their **real** consumer handlers (`drainActivityLogs`, `drainOrderEvents`, `drainPaymentEvents`), exercising the full pipeline end-to-end. See `tests/Feature/Kafka/`.
+
+---
+
 ## Architecture
 
 This project uses the **Laravel + Inertia + Vue** stack:

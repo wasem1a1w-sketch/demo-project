@@ -9,11 +9,13 @@ use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class CheckoutAcceptanceTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
@@ -25,6 +27,7 @@ class CheckoutAcceptanceTest extends TestCase
 
     public function test_full_stripe_checkout_flow(): void
     {
+        $this->fakeKafka();
         Notification::fake();
         $user = User::factory()->create();
         $product = Product::factory()->create([
@@ -84,6 +87,7 @@ class CheckoutAcceptanceTest extends TestCase
 
     public function test_full_paypal_checkout_flow(): void
     {
+        $this->fakeKafka();
         Notification::fake();
         $user = User::factory()->create();
         $product = Product::factory()->create([
@@ -136,6 +140,7 @@ class CheckoutAcceptanceTest extends TestCase
 
     public function test_offline_checkout_flow(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $product = Product::factory()->create([
             'price' => 15.00,
@@ -177,6 +182,7 @@ class CheckoutAcceptanceTest extends TestCase
 
     public function test_failed_payment_flow_restores_stock_and_cancels_order(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $product = Product::factory()->create([
             'price' => 20.00,
@@ -219,6 +225,8 @@ class CheckoutAcceptanceTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $webhookResponse->assertStatus(200);
+
+        $this->drainPaymentEvents();
 
         $this->assertEquals('failed', $payment->fresh()->status->value);
         $this->assertDatabaseHas('orders', ['id' => $orderId, 'payment_status' => 'failed']);

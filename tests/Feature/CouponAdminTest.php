@@ -7,10 +7,12 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class CouponAdminTest extends TestCase
 {
+    use InteractsWithKafka;
     use RefreshDatabase;
 
     private User $admin;
@@ -111,11 +113,14 @@ class CouponAdminTest extends TestCase
 
     public function test_logs_coupon_created(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post('/admin/coupons', [
             'code' => 'LOGTEST',
             'type' => 'percentage',
             'value' => 10,
         ]);
+
+        $this->drainActivityLogs();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'coupon_created',
@@ -128,11 +133,14 @@ class CouponAdminTest extends TestCase
     {
         $coupon = Coupon::factory()->create(['code' => 'OLDCODE']);
 
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post("/admin/coupons/{$coupon->id}", [
             'code' => 'NEWCODE',
             'type' => 'percentage',
             'value' => 10,
         ]);
+
+        $this->drainActivityLogs();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'coupon_updated',
@@ -145,7 +153,10 @@ class CouponAdminTest extends TestCase
     {
         $coupon = Coupon::factory()->create(['code' => 'DELETEME']);
 
+        $this->fakeKafka();
         $this->actingAs($this->admin)->delete("/admin/coupons/{$coupon->id}");
+
+        $this->drainActivityLogs();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'coupon_deleted',

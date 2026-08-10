@@ -4,17 +4,14 @@ namespace App\Services;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Events\ClientNotificationBroadcast;
+use App\Kafka\KafkaTopics;
+use App\Kafka\Outbox;
 use App\Models\Address;
-use App\Models\AdminNotification;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Setting;
-use App\Models\UserActivityLog;
-use App\Notifications\OrderStatusChanged;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 
@@ -46,7 +43,9 @@ class OrderService
 
             foreach ($items as $item) {
                 $product = $products->get($item['product_id']);
-                if (!$product) continue;
+                if (! $product) {
+                    continue;
+                }
 
                 $lineTotal = (float) $product->price * (int) $item['quantity'];
                 $recalculatedSubtotal += $lineTotal;
@@ -61,7 +60,7 @@ class OrderService
                 ];
 
                 $product->decrement('stock', $item['quantity']);
-                if ($product->stock <= 5 && !isset($this->lowStockProducts[$product->id])) {
+                if ($product->stock <= 5 && ! isset($this->lowStockProducts[$product->id])) {
                     $this->lowStockProducts[$product->id] = $product;
                 }
             }
@@ -96,7 +95,7 @@ class OrderService
                 OrderItem::create(array_merge($orderItem, ['order_id' => $order->id]));
             }
 
-            if (!empty($validated['coupon_id'])) {
+            if (! empty($validated['coupon_id'])) {
                 Coupon::where('id', $validated['coupon_id'])->increment('used_count');
             }
 
@@ -105,50 +104,46 @@ class OrderService
                 Session::forget(['cart_coupon_id', 'cart_session']);
             }
 
+            $this->recordOrderPlaced($order, $user);
+
             return $order;
         });
-
-        $this->sendOrderNotifications($order, $validated, $user);
 
         return $order;
     }
 
-    private function sendOrderNotifications(Order $order, array $validated, $user): void
+    private function recordOrderPlaced(Order $order, $user): void
     {
-        AdminNotification::notify('new_order', [
-            'order_id' => $order->id,
-            'order_number' => $order->order_number,
-            'total' => $order->total,
-            'customer_name' => $order->shipping_name,
-            'message' => "New order #{$order->order_number} for \${$order->total}",
-        ]);
-
-        if ($user) {
-            $user->notify(new OrderStatusChanged($order, 'new', 'pending'));
-            broadcast(new ClientNotificationBroadcast('order_status_changed', [
-                'order_number' => $order->order_number,
+        app(Outbox::class)->record(
+            KafkaTopics::ORDER_EVENTS,
+            'order.placed',
+            [
                 'order_id' => $order->id,
-                'old_status' => 'new',
-                'new_status' => 'pending',
-                'message' => "Order #{$order->order_number} is now pending",
-            ], $user->id));
-        }
-
-        UserActivityLog::record($user?->id, 'order_placed', "Order placed: {$order->order_number}");
-
-        foreach ($this->lowStockProducts as $lowStockProduct) {
-            AdminNotification::notify('low_stock', [
-                'product_id' => $lowStockProduct->id,
-                'product_name' => $lowStockProduct->name,
-                'stock' => $lowStockProduct->stock,
-                'message' => "Low stock: {$lowStockProduct->name} ({$lowStockProduct->stock} left)",
-            ]);
-        }
+                'order_number' => $order->order_number,
+                'total' => (float) $order->total,
+                'user_id' => $order->user_id,
+                'user_name' => $user?->name,
+                'user_email' => $user?->email,
+                'payment_method' => $order->payment_method,
+                'payment_status' => $order->payment_status->value,
+                'low_stock' => collect($this->lowStockProducts)
+                    ->map(fn (Product $product): array => [
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                        'stock' => $product->stock,
+                    ])
+                    ->values()
+                    ->all(),
+            ],
+            (string) $order->id,
+        );
     }
 
     public function saveShippingAddress(array $validated, $user): void
     {
-        if (!$user) return;
+        if (! $user) {
+            return;
+        }
 
         $user->addresses()->updateOrCreate(
             [

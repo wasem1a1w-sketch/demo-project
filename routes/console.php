@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('pulse:check')->everyMinute();
 Schedule::command('exceptions:prune --days=30')->weekly();
+Schedule::command('outbox:dispatch')->everyMinute()->withoutOverlapping();

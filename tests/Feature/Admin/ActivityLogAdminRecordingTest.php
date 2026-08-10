@@ -14,11 +14,13 @@ use App\Models\UserActivityLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class ActivityLogAdminRecordingTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private User $admin;
     private Category $category;
@@ -73,6 +75,7 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_product_creation(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post('/admin/products', [
             'name' => 'New Product',
             'slug' => 'new-product',
@@ -85,6 +88,8 @@ class ActivityLogAdminRecordingTest extends TestCase
 
         $product = Product::where('slug', 'new-product')->first();
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'product_created',
             'user_id' => $this->admin->id,
@@ -94,6 +99,7 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_product_update(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create([
             'name' => 'Old Name',
             'category_id' => $this->category->id,
@@ -109,6 +115,8 @@ class ActivityLogAdminRecordingTest extends TestCase
             'is_featured' => false,
         ]);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'product_updated',
             'user_id' => $this->admin->id,
@@ -118,11 +126,14 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_product_deletion(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create([
             'category_id' => $this->category->id,
         ]);
 
         $this->actingAs($this->admin)->delete("/admin/products/{$product->id}");
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'product_deleted',
@@ -133,10 +144,13 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_category_creation(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post('/admin/categories', [
             'name' => 'New Category',
             'slug' => 'new-category',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'category_created',
@@ -147,12 +161,15 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_category_update(): void
     {
+        $this->fakeKafka();
         $category = Category::factory()->create();
 
         $this->actingAs($this->admin)->post("/admin/categories/{$category->id}", [
             'name' => 'Updated Category',
             'slug' => $category->slug,
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'category_updated',
@@ -163,9 +180,12 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_category_deletion(): void
     {
+        $this->fakeKafka();
         $category = Category::factory()->create();
 
         $this->actingAs($this->admin)->delete("/admin/categories/{$category->id}");
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'category_deleted',
@@ -176,12 +196,15 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_order_status_change(): void
     {
+        $this->fakeKafka();
         $order = $this->createOrder();
 
         $this->actingAs($this->admin)->put("/admin/orders/{$order->id}", [
             'status' => 'processing',
             'payment_status' => 'paid',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'order_status_changed',
@@ -192,12 +215,15 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_user_creation(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post('/admin/users', [
             'name' => 'New User',
             'email' => 'newuser@example.com',
             'password' => 'Password1!',
             'password_confirmation' => 'Password1!',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'user_created',
@@ -208,12 +234,15 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_user_update(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create(['email' => 'old@example.com']);
 
         $this->actingAs($this->admin)->post("/admin/users/{$user->id}", [
             'name' => 'Updated User',
             'email' => 'updated@example.com',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'user_updated',
@@ -224,9 +253,12 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_user_deletion(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create(['email' => 'delete@example.com']);
 
         $this->actingAs($this->admin)->delete("/admin/users/{$user->id}");
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'user_deleted',
@@ -237,6 +269,7 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_review_approval(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create(['category_id' => $this->category->id]);
         $review = ProductReview::create([
             'product_id' => $product->id,
@@ -248,6 +281,8 @@ class ActivityLogAdminRecordingTest extends TestCase
 
         $this->actingAs($this->admin)->patch("/admin/reviews/{$review->id}/approve");
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'review_approved',
             'user_id' => $this->admin->id,
@@ -257,6 +292,7 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_review_rejection(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create(['category_id' => $this->category->id]);
         $review = ProductReview::create([
             'product_id' => $product->id,
@@ -268,6 +304,8 @@ class ActivityLogAdminRecordingTest extends TestCase
 
         $this->actingAs($this->admin)->patch("/admin/reviews/{$review->id}/reject");
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'review_rejected',
             'user_id' => $this->admin->id,
@@ -277,6 +315,7 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_review_deletion(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create(['category_id' => $this->category->id]);
         $review = ProductReview::create([
             'product_id' => $product->id,
@@ -287,6 +326,8 @@ class ActivityLogAdminRecordingTest extends TestCase
 
         $this->actingAs($this->admin)->delete("/admin/reviews/{$review->id}");
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'review_deleted',
             'user_id' => $this->admin->id,
@@ -296,11 +337,14 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_settings_update(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->put('/admin/settings', [
             'shipping_rate' => 20,
             'tax_rate' => 8,
             'free_shipping_threshold' => 150,
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'settings_updated',
@@ -311,12 +355,15 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_order_payment_change(): void
     {
+        $this->fakeKafka();
         $order = $this->createOrder();
 
         $this->actingAs($this->admin)->put("/admin/orders/{$order->id}", [
             'status' => 'pending',
             'payment_status' => 'paid',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'order_payment_changed',
@@ -327,9 +374,12 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_role_creation(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post('/admin/users/roles', [
             'name' => 'editor',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'role_created',
@@ -340,11 +390,14 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_role_update(): void
     {
+        $this->fakeKafka();
         $role = Role::create(['name' => 'editor', 'guard_name' => 'web']);
 
         $this->actingAs($this->admin)->post("/admin/users/roles/{$role->id}", [
             'name' => 'super-editor',
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'role_updated',
@@ -355,9 +408,12 @@ class ActivityLogAdminRecordingTest extends TestCase
 
     public function test_logs_role_deletion(): void
     {
+        $this->fakeKafka();
         $role = Role::create(['name' => 'editor', 'guard_name' => 'web']);
 
         $this->actingAs($this->admin)->delete("/admin/users/roles/{$role->id}");
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'role_deleted',

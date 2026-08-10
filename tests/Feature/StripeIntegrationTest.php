@@ -11,11 +11,13 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class StripeIntegrationTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
@@ -110,6 +112,7 @@ class StripeIntegrationTest extends TestCase
 
     public function test_webhook_accepted_with_signature(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $order = Order::factory()->create([
             'user_id' => $user->id,
@@ -130,6 +133,7 @@ class StripeIntegrationTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
+        $this->drainPaymentEvents();
         $this->assertEquals('paid', $payment->fresh()->status->value);
         $this->assertEquals('paid', $order->fresh()->payment_status->value);
     }

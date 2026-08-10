@@ -6,16 +6,18 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class ProductAdminTest extends TestCase
 {
+    use InteractsWithKafka;
     use RefreshDatabase;
 
     private User $admin;
+
     private Category $category;
 
     protected function setUp(): void
@@ -130,6 +132,7 @@ class ProductAdminTest extends TestCase
 
     public function test_logs_product_activity(): void
     {
+        $this->fakeKafka();
         $this->actingAs($this->admin)->post('/admin/products', [
             'name' => 'Activity Test',
             'slug' => 'activity-test',
@@ -137,12 +140,6 @@ class ProductAdminTest extends TestCase
             'stock' => 5,
             'category_id' => $this->category->id,
             'is_active' => true,
-        ]);
-
-        $this->assertDatabaseHas('user_activity_logs', [
-            'type' => 'product_created',
-            'user_id' => $this->admin->id,
-            'description' => 'Product created: Activity Test',
         ]);
 
         $product = Product::where('slug', 'activity-test')->first();
@@ -155,12 +152,20 @@ class ProductAdminTest extends TestCase
             'category_id' => $this->category->id,
         ]);
 
+        $this->actingAs($this->admin)->delete("/admin/products/{$product->id}");
+
+        $this->drainActivityLogs();
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'product_created',
+            'user_id' => $this->admin->id,
+            'description' => 'Product created: Activity Test',
+        ]);
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'product_updated',
             'user_id' => $this->admin->id,
         ]);
-
-        $this->actingAs($this->admin)->delete("/admin/products/{$product->id}");
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'product_deleted',

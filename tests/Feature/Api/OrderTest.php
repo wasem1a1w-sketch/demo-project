@@ -9,11 +9,13 @@ use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class OrderTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
@@ -21,6 +23,7 @@ class OrderTest extends TestCase
     {
         parent::setUp();
 
+        $this->fakeKafka();
         $this->category = Category::factory()->create(['is_active' => true]);
 
         Setting::set('shipping_rate', 15);

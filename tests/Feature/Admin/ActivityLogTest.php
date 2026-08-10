@@ -32,7 +32,7 @@ class ActivityLogTest extends TestCase
 
     public function test_admin_can_view_activity_logs_page(): void
     {
-        UserActivityLog::record(null, 'test', 'Test entry');
+        UserActivityLog::persist(['type' => 'test', 'description' => 'Test entry']);
 
         $response = $this->actingAs($this->admin)->get('/admin/activity-logs');
 
@@ -58,9 +58,9 @@ class ActivityLogTest extends TestCase
 
     public function test_activity_logs_page_paginates_results(): void
     {
-        UserActivityLog::record(null, 'test', 'Old entry', [], now()->subDay());
+        UserActivityLog::persist(['type' => 'test', 'description' => 'Old entry', 'created_at' => now()->subDay()->toIso8601String()]);
         for ($i = 0; $i < 25; $i++) {
-            UserActivityLog::record(null, 'test', "Entry $i");
+            UserActivityLog::persist(['type' => 'test', 'description' => "Entry $i"]);
         }
 
         $response = $this->actingAs($this->admin)->get('/admin/activity-logs');
@@ -70,8 +70,8 @@ class ActivityLogTest extends TestCase
 
     public function test_admin_can_fetch_logs_via_api(): void
     {
-        UserActivityLog::record(1, 'order_placed', 'Order #ORD-123 placed');
-        UserActivityLog::record(null, 'user_registered', 'Guest registered');
+        UserActivityLog::persist(['user_id' => 1, 'type' => 'order_placed', 'description' => 'Order #ORD-123 placed']);
+        UserActivityLog::persist(['type' => 'user_registered', 'description' => 'Guest registered']);
 
         $response = $this->actingAs($this->admin)->getJson('/admin/activity-logs/data');
 
@@ -98,9 +98,9 @@ class ActivityLogTest extends TestCase
 
     public function test_api_can_filter_logs_by_type(): void
     {
-        UserActivityLog::record(null, 'order_placed', 'Order placed');
-        UserActivityLog::record(null, 'user_registered', 'User registered');
-        UserActivityLog::record(null, 'product_created', 'Product created');
+        UserActivityLog::persist(['type' => 'order_placed', 'description' => 'Order placed']);
+        UserActivityLog::persist(['type' => 'user_registered', 'description' => 'User registered']);
+        UserActivityLog::persist(['type' => 'product_created', 'description' => 'Product created']);
 
         $response = $this->actingAs($this->admin)->getJson('/admin/activity-logs/data?type=order_placed');
 
@@ -111,8 +111,8 @@ class ActivityLogTest extends TestCase
 
     public function test_api_can_filter_logs_by_date_range(): void
     {
-        UserActivityLog::record(null, 'test', 'Old entry', [], now()->subWeek());
-        UserActivityLog::record(null, 'test', 'Recent entry');
+        UserActivityLog::persist(['type' => 'test', 'description' => 'Old entry', 'created_at' => now()->subWeek()->toIso8601String()]);
+        UserActivityLog::persist(['type' => 'test', 'description' => 'Recent entry']);
 
         $response = $this->actingAs($this->admin)->getJson('/admin/activity-logs/data?date_from='.now()->subDay()->format('Y-m-d'));
 

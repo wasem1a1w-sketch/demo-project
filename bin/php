@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# PHP wrapper that loads user-compiled extensions (rdkafka) without sudo.
+# Usage: bin/php artisan <command>
+if [[ -z "$LD_LIBRARY_PATH" ]]; then
+    export LD_LIBRARY_PATH="$HOME/.local/lib"
+else
+    export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
+fi
+export PHP_INI_SCAN_DIR="/etc/php.d:$HOME/.config/php"
+exec /usr/bin/php "$@"

@@ -13,17 +13,21 @@ use App\Models\User;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class PayPalIntegrationTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->fakeKafka();
         $this->category = Category::factory()->create(['is_active' => true]);
     }
 

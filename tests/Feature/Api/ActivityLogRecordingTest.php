@@ -12,11 +12,13 @@ use App\Models\UserActivityLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class ActivityLogRecordingTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
@@ -37,6 +39,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_user_registration(): void
     {
+        $this->fakeKafka();
         $response = $this->post('/register', [
             'first_name' => 'John',
             'last_name' => 'Doe',
@@ -47,6 +50,8 @@ class ActivityLogRecordingTest extends TestCase
 
         $response->assertStatus(302);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'user_registered',
             'description' => 'User registered: john@example.com',
@@ -55,6 +60,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_user_login(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create([
             'email' => 'john@example.com',
             'password' => bcrypt('Password1!'),
@@ -67,6 +73,8 @@ class ActivityLogRecordingTest extends TestCase
 
         $response->assertStatus(302);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'user_login',
             'user_id' => $user->id,
@@ -76,6 +84,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_order_placement(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create([
             'price' => 50.00,
             'stock' => 10,
@@ -120,6 +129,8 @@ class ActivityLogRecordingTest extends TestCase
 
         $response->assertStatus(200);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'order_placed',
             'description' => "Order placed: {$response->json('order_number')}",
@@ -128,6 +139,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_review_submission(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create([
             'is_active' => true,
             'category_id' => $this->category->id,
@@ -142,6 +154,8 @@ class ActivityLogRecordingTest extends TestCase
 
         $response->assertStatus(201);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'review_created',
             'user_id' => $user->id,
@@ -151,6 +165,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_user_logout(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create([
             'email' => 'john@example.com',
             'password' => bcrypt('Password1!'),
@@ -163,6 +178,8 @@ class ActivityLogRecordingTest extends TestCase
 
         $this->post('/logout');
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'user_logout',
             'user_id' => $user->id,
@@ -172,6 +189,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_address_creation(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
 
         $this->actingAs($user)->post('/addresses', [
@@ -186,6 +204,8 @@ class ActivityLogRecordingTest extends TestCase
             'phone' => '1234567890',
         ]);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'address_created',
             'user_id' => $user->id,
@@ -195,6 +215,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_cart_item_added(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create([
             'is_active' => true,
             'stock' => 99,
@@ -206,6 +227,8 @@ class ActivityLogRecordingTest extends TestCase
             'quantity' => 2,
         ]);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'cart_item_added',
             'description' => "Item added to cart: {$product->name} x2",
@@ -214,6 +237,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_coupon_applied(): void
     {
+        $this->fakeKafka();
         $product = Product::factory()->create([
             'is_active' => true,
             'stock' => 99,
@@ -237,6 +261,8 @@ class ActivityLogRecordingTest extends TestCase
 
         $this->postJson('/api/cart/coupon', ['code' => 'SAVE10']);
 
+        $this->drainKafkaMessages();
+
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'coupon_applied',
             'description' => 'Coupon applied: SAVE10',
@@ -245,6 +271,7 @@ class ActivityLogRecordingTest extends TestCase
 
     public function test_logs_wishlist_item_added(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $product = Product::factory()->create([
             'is_active' => true,
@@ -254,6 +281,8 @@ class ActivityLogRecordingTest extends TestCase
         $this->actingAs($user)->postJson('/api/wishlist/add', [
             'product_id' => $product->id,
         ]);
+
+        $this->drainKafkaMessages();
 
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'wishlist_item_added',

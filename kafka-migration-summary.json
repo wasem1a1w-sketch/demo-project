@@ -1,0 +1,157 @@
+{
+  "project": "Laravel E-Commerce (myproject)",
+  "summary_title": "Kafka Event Streaming Migration",
+  "date": "2026-08-10",
+  "overview": "Replaced synchronous writes (activity logs, order lifecycle side-effects, payment webhook processing) with Kafka event streaming: producers write events into the transactional outbox table inside the same DB transaction, and a scheduled dispatcher delivers them to Kafka topics where long-running consumer workers process them asynchronously. Synchronous DB writes were replaced, not dual-written.",
+  "phases": [
+    {
+      "phase": "0 - Infrastructure & Foundation",
+      "completed": true,
+      "changes": [
+        "docker-compose.yml: added apache/kafka:3.9.0 (KRaft, single node, listeners PLAINTEXT kafka:29092 + PLAINTEXT_HOST localhost:9092) and kafka-ui (port 8082)",
+        "rdkafka PHP extension (librdkafka 2.8.0 + rdkafka 6.0.1) built from source into ~/.local",
+        "bin/php wrapper: sets LD_LIBRARY_PATH + PHP_INI_SCAN_DIR so php/composer/phpunit resolve rdkafka",
+        "Dockerfile and .github/workflows/ci.yml updated to install/enable rdkafka",
+        "composer.json: added mateusjunges/laravel-kafka v2.11 (config/kafka.php published)",
+        ".env and .env.example: added KAFKA_BROKERS, KAFKA_CONSUMER_GROUP_ID, KAFKA_OFFSET_RESET, KAFKA_AUTO_COMMIT"
+      ],
+      "new_files": [
+        "app/Kafka/KafkaTopics.php",
+        "app/Kafka/EventEnvelope.php",
+        "app/Kafka/KafkaEventPublisher.php",
+        "app/Console/Commands/KafkaProduceCommand.php",
+        "app/Console/Commands/KafkaConsumeCommand.php"
+      ]
+    },
+    {
+      "phase": "1 - Activity Logging",
+      "completed": true,
+      "changes": [
+        "UserActivityLog::record() now publishes to user-activity-logs topic (key = user_id) instead of inserting a row",
+        "UserActivityLog::persist() added - writes the row, used by the consumer (49 call sites unchanged)",
+        "ActivityLogHandler consumer persists messages to user_activity_logs"
+      ],
+      "new_files": [
+        "app/Kafka/Consumers/ActivityLogHandler.php"
+      ]
+    },
+    {
+      "phase": "2 - Order Lifecycle Events",
+      "completed": true,
+      "changes": [
+        "OrderService::placeOrder() publishes order.placed (key = order_id, includes low_stock payload)",
+        "Order::transitionStatus($newStatus, ?int $actorUserId) publishes order.status_changed",
+        "Order::cancel(?int $actorUserId) added (publishes status change; stock restore on cancel unchanged)",
+        "Admin/OrderController@update now passes auth()->id() and no longer writes notifications/logs inline",
+        "OrderNotificationsHandler: admin alert + customer OrderStatusChanged email + ClientNotificationBroadcast + low-stock notification",
+        "OrderAnalyticsHandler: writes order_placed / order_status_changed activity rows"
+      ],
+      "new_files": [
+        "app/Kafka/Consumers/OrderNotificationsHandler.php",
+        "app/Kafka/Consumers/OrderAnalyticsHandler.php"
+      ]
+    },
+    {
+      "phase": "3 - Payment Webhooks",
+      "completed": true,
+      "changes": [
+        "PaymentController@handleWebhook now publishes payment.confirmed / payment.failed and returns 200 immediately (no inline processing)",
+        "PaymentEventProcessor: idempotent (claims event_id in processed_payment_events before processing), releases claim on failure",
+        "Transient failures re-published to payment-events-retry with attempts++ (MAX_ATTEMPTS = 3), then to payment-events-dlq",
+        "confirmSuccess and PayPal capture/cancel flows remain synchronous",
+        "database/migrations/2026_08_10_000001_create_processed_payment_events_table.php",
+        "app/Models/ProcessedPaymentEvent.php (unique event_id)",
+        "app/Exceptions/RetryableException.php created"
+      ],
+      "new_files": [
+        "app/Kafka/Consumers/PaymentEventProcessor.php",
+        "app/Models/ProcessedPaymentEvent.php",
+        "app/Exceptions/RetryableException.php",
+        "database/migrations/2026_08_10_000001_create_processed_payment_events_table.php"
+      ]
+    },
+    {
+      "phase": "4 - Testing & Docs",
+      "completed": true,
+      "changes": [
+        "tests/Support/TestKafkaConsumer.php + InteractsWithKafka trait: fakeKafka(), drainKafkaMessages(), drainActivityLogs(), drainOrderEvents(), drainPaymentEvents() route captured messages through real handlers",
+        "Updated existing tests to fake Kafka and drain handlers instead of asserting inline DB rows (ActivityLogTest, ActivityLogRecordingTest, ActivityLogAdminRecordingTest, PaymentTest, CheckoutAcceptanceTest, StripeIntegrationTest, OrderTest, Api/OrderTest, RateLimitingTest, PayPalIntegrationTest, CouponAdminTest, ProductAdminTest, AdminProductAcceptanceTest)",
+        "New Kafka test files (13 tests total) covering publish + consumer behavior",
+        "README.md: added 'Kafka Event Streaming' section (topics, envelope, consumers, idempotency/retry/DLQ, local setup, env vars, testing) + KAFKA_* env var table"
+      ],
+      "new_files": [
+        "tests/Feature/Kafka/ActivityLogKafkaTest.php",
+        "tests/Feature/Kafka/OrderEventsKafkaTest.php",
+        "tests/Feature/Kafka/PaymentEventsKafkaTest.php",
+        "tests/Support/TestKafkaConsumer.php",
+        "tests/Support/InteractsWithKafka.php"
+      ]
+    },
+    {
+      "phase": "5 - Transactional Outbox",
+      "completed": true,
+      "changes": [
+        "New outbox_messages table (event_id unique, topic, payload json, status pending/sent/failed, attempts, available_at backoff gate, sent_at) + App\\Models\\OutboxMessage",
+        "App\\Kafka\\Outbox::record() writes a pending envelope row; Outbox::dispatch() delivers due rows via KafkaEventPublisher, claim-guarded (CAS) so concurrent workers never double-send",
+        "Outbox::record() called INSIDE the business transaction: OrderService::placeOrder (was publishing after commit - ghost-order window closed), Order::transitionStatus/cancel (now wraps save + record in DB::transaction), UserActivityLog::record(), PaymentController@handleWebhook",
+        "Failure policy: attempts++ with exponential backoff (available_at = now + 2^(attempts-1) min, capped 30 min); after 5 attempts left permanently failed for manual review",
+        "App\\Console\\Commands\\OutboxDispatchCommand (outbox:dispatch) + scheduled everyMinute with withoutOverlapping in routes/console.php",
+        "PaymentEventProcessor retry/DLQ publishes stay direct (already async at-least-once via offsets); KafkaEventPublisher remains the real sender",
+        "InteractsWithKafka trait: added dispatchOutbox(), called at top of each drain*()",
+        "New tests/Feature/Kafka/OutboxTest.php (4 tests): atomic row on placeOrder, nothing published until dispatch, failure->backoff->eventual sent, cap->permanent failed",
+        "Updated direct-publish assertions in ActivityLogKafkaTest/OrderEventsKafkaTest/PaymentEventsKafkaTest to dispatch before asserting"
+      ],
+      "new_files": [
+        "database/migrations/2026_08_10_000002_create_outbox_messages_table.php",
+        "app/Models/OutboxMessage.php",
+        "app/Kafka/Outbox.php",
+        "app/Console/Commands/OutboxDispatchCommand.php",
+        "tests/Feature/Kafka/OutboxTest.php"
+      ]
+    }
+  ],
+  "topics": {
+    "user-activity-logs": { "producers": ["UserActivityLog::record() (via outbox)"], "consumers": ["ActivityLogHandler"] },
+    "order-events": { "producers": ["OrderService::placeOrder()", "Order::transitionStatus() (via outbox)"], "consumers": ["OrderNotificationsHandler", "OrderAnalyticsHandler"] },
+    "payment-events": { "producers": ["PaymentController@handleWebhook (via outbox)"], "consumers": ["PaymentEventProcessor"] },
+    "payment-events-retry": { "producers": ["PaymentEventProcessor (direct)"], "consumers": ["PaymentEventProcessor"] },
+    "payment-events-dlq": { "producers": ["PaymentEventProcessor (direct)"], "consumers": [] }
+  },
+  "outbox": {
+    "table": "outbox_messages",
+    "record": "App\\Kafka\\Outbox::record() - writes pending row inside the business transaction",
+    "dispatch": "App\\Kafka\\Outbox::dispatch() - ships due rows, CAS-claimed, marks sent on success",
+    "backoff": "available_at = now + min(30, 2^(attempts-1)) minutes",
+    "max_attempts": 5,
+    "terminal_state": "status = failed after 5 failed attempts (manual review)",
+    "scheduler": "outbox:dispatch every minute (withoutOverlapping) in routes/console.php"
+  },
+  "event_envelope": {
+    "event_type": "string",
+    "event_id": "uuid (idempotency key)",
+    "occurred_at": "ISO 8601 timestamp",
+    "key": "partition key",
+    "data": "object"
+  },
+  "consumer_workers": [
+    { "name": "activity-logs", "topics": ["user-activity-logs"], "group": "activity-log-writer", "handler": "ActivityLogHandler" },
+    { "name": "order-notifications", "topics": ["order-events"], "group": "order-notifications", "handler": "OrderNotificationsHandler" },
+    { "name": "order-analytics", "topics": ["order-events"], "group": "order-analytics", "handler": "OrderAnalyticsHandler" },
+    { "name": "payments", "topics": ["payment-events", "payment-events-retry"], "group": "payment-processor", "handler": "PaymentEventProcessor" }
+  ],
+  "commands": {
+    "kafka:consume": "php artisan kafka:consume {activity-logs|order-notifications|order-analytics|payments}",
+    "kafka:produce": "php artisan kafka:produce --topic=<topic> [message]",
+    "outbox:dispatch": "php artisan outbox:dispatch [--limit=500]"
+  },
+  "verification": {
+    "test_suite": "270 tests, 821 assertions - all passing",
+    "code_style": "Pint applied (ordered traits, class attributes, unused imports)",
+    "live_kafka_verification": "PENDING - blocked: user must run 'sudo docker compose up -d kafka kafka-ui' (not in docker group, no passwordless sudo)"
+  },
+  "notes": [
+    "Local php lacks rdkafka - use bin/php wrapper for artisan/composer/phpunit",
+    "Local DB is MySQL (myproject/fxnew); outbox_messages and processed_payment_events migrations must be applied (php artisan migrate --force)",
+    "No commit made - changes are uncommitted working tree"
+  ]
+}

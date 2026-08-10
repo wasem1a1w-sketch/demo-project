@@ -6,16 +6,18 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class AdminProductAcceptanceTest extends TestCase
 {
+    use InteractsWithKafka;
     use RefreshDatabase;
 
     private User $admin;
+
     private Category $category;
 
     protected function setUp(): void
@@ -35,6 +37,7 @@ class AdminProductAcceptanceTest extends TestCase
 
     public function test_admin_product_lifecycle(): void
     {
+        $this->fakeKafka();
         $response = $this->actingAs($this->admin)->get('/admin/products/create');
         $response->assertStatus(200);
 
@@ -64,11 +67,6 @@ class AdminProductAcceptanceTest extends TestCase
 
         $product = Product::where('slug', 'test-product')->first();
 
-        $this->assertDatabaseHas('user_activity_logs', [
-            'type' => 'product_created',
-            'user_id' => $this->admin->id,
-        ]);
-
         $response = $this->actingAs($this->admin)->get("/admin/products/{$product->id}");
         $response->assertStatus(200);
 
@@ -94,15 +92,21 @@ class AdminProductAcceptanceTest extends TestCase
             'is_active' => false,
         ]);
 
-        $this->assertDatabaseHas('user_activity_logs', [
-            'type' => 'product_updated',
-            'user_id' => $this->admin->id,
-        ]);
-
         $response = $this->actingAs($this->admin)->delete("/admin/products/{$product->id}");
         $response->assertRedirect(route('admin.products'));
 
         $this->assertDatabaseMissing('products', ['id' => $product->id]);
+
+        $this->drainActivityLogs();
+
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'product_created',
+            'user_id' => $this->admin->id,
+        ]);
+        $this->assertDatabaseHas('user_activity_logs', [
+            'type' => 'product_updated',
+            'user_id' => $this->admin->id,
+        ]);
         $this->assertDatabaseHas('user_activity_logs', [
             'type' => 'product_deleted',
             'user_id' => $this->admin->id,

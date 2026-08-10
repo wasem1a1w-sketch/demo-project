@@ -7,17 +7,21 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class OrderTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->fakeKafka();
         $this->category = Category::factory()->create(['is_active' => true]);
     }
 

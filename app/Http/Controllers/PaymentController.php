@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\PaymentStatus;
 use App\Http\Requests\PaymentRequest;
+use App\Kafka\KafkaTopics;
+use App\Kafka\Outbox;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\PaymentService;
@@ -25,7 +27,7 @@ class PaymentController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        if (!$order->shipping_address) {
+        if (! $order->shipping_address) {
             return response()->json([
                 'error' => 'Validation failed',
                 'errors' => ['shipping_address' => ['Shipping address is required']],
@@ -69,17 +71,31 @@ class PaymentController extends Controller
 
     public function handleWebhook(Request $request)
     {
-        if (!$this->paymentService->verifyWebhookSignature($request)) {
+        if (! $this->paymentService->verifyWebhookSignature($request)) {
             return response()->json(['error' => 'Invalid signature'], 400);
         }
 
         $event = $request->json('type');
         $eventData = $request->json('data.object');
 
+        $outbox = app(Outbox::class);
+
         if ($event === 'checkout.session.completed') {
-            $this->paymentService->handleCheckoutComplete($eventData['id'] ?? '');
+            $sessionId = $eventData['id'] ?? '';
+            $outbox->record(
+                KafkaTopics::PAYMENT_EVENTS,
+                'payment.confirmed',
+                ['session_id' => $sessionId],
+                $sessionId ?: null,
+            );
         } elseif ($event === 'payment_intent.payment_failed') {
-            $this->paymentService->handlePaymentFailed($eventData['id'] ?? '');
+            $reference = $eventData['id'] ?? '';
+            $outbox->record(
+                KafkaTopics::PAYMENT_EVENTS,
+                'payment.failed',
+                ['provider_reference' => $reference],
+                $reference ?: null,
+            );
         }
 
         return response()->json(['success' => true]);
@@ -95,7 +111,7 @@ class PaymentController extends Controller
 
         $payment = $order->payments()->orderByDesc('created_at')->first();
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json(['error' => 'No payment found'], 404);
         }
 
@@ -129,7 +145,7 @@ class PaymentController extends Controller
             })
             ->first();
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json(['error' => 'Payment not found'], 404);
         }
 
@@ -143,7 +159,7 @@ class PaymentController extends Controller
 
         $sessionData = $this->paymentService->retrieveStripeSession($sessionId);
 
-        if (!$sessionData || ($sessionData['payment_status'] ?? 'unpaid') !== 'paid') {
+        if (! $sessionData || ($sessionData['payment_status'] ?? 'unpaid') !== 'paid') {
             return response()->json(['error' => 'Payment not completed'], 400);
         }
 
@@ -161,16 +177,16 @@ class PaymentController extends Controller
         $user = Auth::user();
         $token = $request->query('token');
 
-        if (!$token) {
+        if (! $token) {
             return response()->json(['error' => 'Missing PayPal token'], 400);
         }
 
         $payment = Payment::with('order.items.product')
             ->where('provider_session_id', $token)
-            ->whereHas('order', fn($q) => $q->where('user_id', $user->id))
+            ->whereHas('order', fn ($q) => $q->where('user_id', $user->id))
             ->first();
 
-        if (!$payment) {
+        if (! $payment) {
             return response()->json(['error' => 'Payment not found'], 404);
         }
 
@@ -183,6 +199,7 @@ class PaymentController extends Controller
         } catch (\Exception $e) {
             $payment->transitionStatus(PaymentStatus::Failed);
             $payment->order->update(['payment_status' => PaymentStatus::Failed]);
+
             return response()->json(['error' => $e->getMessage()], 502);
         }
 

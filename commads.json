@@ -1,6 +1,7 @@
 {
     "run caddy": "caddy run --config Caddyfile.local --adapter caddyfile",
     "start reverb": "php artisan reverb:start",
+    "pulse":"php artisan pulse:work",
     "give user file ownership": "sudo chown -R user:user {project_path} && echo 'done'",
     "run caddy - reverb - serve":"npx concurrently -k -c '#93c5fd,#c4b5fd,#d4d4d8' 'php artisan serve' 'php artisan reverb:start --host=127.0.0.1 --port=8081' 'caddy run --config Caddyfile.local' --names='server,reverb,caddy'"
 }

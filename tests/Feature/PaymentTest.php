@@ -12,11 +12,13 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Tests\Support\InteractsWithKafka;
 use Tests\TestCase;
 
 class PaymentTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithKafka;
 
     private Category $category;
 
@@ -417,6 +419,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_rejects_missing_signature(): void
     {
+        $this->fakeKafka();
         $response = $this->postJson('/api/payments/webhook', [
             'type' => 'checkout.session.completed',
             'data' => ['object' => ['id' => 'cs_test_123']],
@@ -430,6 +433,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_checkout_completed_updates_payment_to_paid(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $order = Order::factory()->create([
             'user_id' => $user->id,
@@ -450,6 +454,8 @@ class PaymentTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
+        $this->drainPaymentEvents();
+
         $this->assertEquals('paid', $payment->fresh()->status->value);
         $this->assertEquals('paid', $order->fresh()->payment_status->value);
     }
@@ -459,6 +465,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_checkout_completed_decrements_stock(): void
     {
+        $this->fakeKafka();
         Mail::fake();
 
         $user = User::factory()->create();
@@ -489,6 +496,8 @@ class PaymentTest extends TestCase
             'data' => ['object' => ['id' => 'cs_test_stock123']],
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
+        $this->drainPaymentEvents();
+
         $this->assertEquals(10, $product->fresh()->stock);
     }
 
@@ -497,6 +506,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_checkout_completed_marks_paid(): void
     {
+        $this->fakeKafka();
         Mail::fake();
 
         $user = User::factory()->create();
@@ -528,6 +538,8 @@ class PaymentTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
+        $this->drainPaymentEvents();
+
         $this->assertEquals('paid', Payment::where('provider_session_id', 'cs_test_cart123')->first()->status->value);
     }
 
@@ -536,6 +548,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_checkout_completed_sends_confirmation(): void
     {
+        $this->fakeKafka();
         Notification::fake();
 
         $user = User::factory()->create();
@@ -566,6 +579,8 @@ class PaymentTest extends TestCase
             'data' => ['object' => ['id' => 'cs_test_notify123']],
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
+        $this->drainPaymentEvents();
+
         Notification::assertSentTo(
             $user,
             \App\Notifications\OrderConfirmation::class,
@@ -580,6 +595,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_payment_failed_updates_status_to_failed(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $order = Order::factory()->create([
             'user_id' => $user->id,
@@ -600,6 +616,8 @@ class PaymentTest extends TestCase
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
         $response->assertStatus(200);
+        $this->drainPaymentEvents();
+
         $this->assertEquals('failed', $payment->fresh()->status->value);
         $this->assertEquals('failed', $order->fresh()->payment_status->value);
     }
@@ -609,6 +627,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_payment_failed_restores_stock(): void
     {
+        $this->fakeKafka();
         $user = User::factory()->create();
         $product = Product::factory()->create(['stock' => 5, 'is_active' => true, 'category_id' => $this->category->id]);
         $order = Order::factory()->create([
@@ -637,6 +656,8 @@ class PaymentTest extends TestCase
             'data' => ['object' => ['id' => 'pi_restore_123']],
         ], ['Stripe-Signature' => 'valid_test_signature']);
 
+        $this->drainPaymentEvents();
+
         $this->assertEquals(7, $product->fresh()->stock);
     }
 
@@ -645,6 +666,7 @@ class PaymentTest extends TestCase
      */
     public function test_webhook_ignores_unknown_event(): void
     {
+        $this->fakeKafka();
         $response = $this->postJson('/api/payments/webhook', [
             'type' => 'charge.updated',
             'data' => ['object' => ['id' => 'ch_xyz']],
