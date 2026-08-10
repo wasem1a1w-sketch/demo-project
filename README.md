@@ -252,6 +252,10 @@ php artisan exceptions:prune --days=30
 
 Async event streaming via Apache Kafka (`mateusjunges/laravel-kafka`). Producers publish to topics; long-running consumer workers (`kafka:consume`) process them asynchronously. Each event is an `App\Kafka\EventEnvelope`:
 
+> See **[`KAFKA.md`](KAFKA.md)** for a detailed walkthrough of the Kafka code — the
+> transactional outbox, every producer/consumer, delivery guarantees, failure scenarios,
+> and the operations runbook.
+
 ```json
 {
   "event_type": "payment.confirmed",
