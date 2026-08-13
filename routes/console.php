@@ -10,4 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('pulse:check')->everyMinute();
 Schedule::command('exceptions:prune --days=30')->weekly();
-Schedule::command('outbox:dispatch')->everyMinute()->withoutOverlapping();
+// Watchdog: boot/keep the Kafka consumer + dispatcher workers alive from code
+// (no supervisor/systemd needed). Outbox delivery runs via kafka:dispatch-loop,
+// which runs under an rdkafka-capable PHP.
+Schedule::command('kafka:workers watch')->everyMinute()->withoutOverlapping();

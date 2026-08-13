@@ -25,6 +25,8 @@ myproject
 /public/storage
 /public/uploads
 /storage/*.key
+/storage/kafka
+/storage/logs/kafka
 /storage/pail
 /vendor
 _ide_helper.php

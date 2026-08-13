@@ -3,5 +3,17 @@
     "start reverb": "php artisan reverb:start",
     "pulse":"php artisan pulse:work",
     "give user file ownership": "sudo chown -R user:user {project_path} && echo 'done'",
-    "run caddy - reverb - serve":"npx concurrently -k -c '#93c5fd,#c4b5fd,#d4d4d8' 'php artisan serve' 'php artisan reverb:start --host=127.0.0.1 --port=8081' 'caddy run --config Caddyfile.local' --names='server,reverb,caddy'"
+    "run caddy - reverb - serve":"npx concurrently -k -c '#93c5fd,#c4b5fd,#d4d4d8' 'php artisan serve' 'php artisan reverb:start --host=127.0.0.1 --port=8081' 'caddy run --config Caddyfile.local' --names='server,reverb,caddy'",
+    "docker up": "sudo docker compose up -d --build",
+    "docker kafka": "sudo docker compose up -d kafka kafka-ui",
+    "docker logs": "sudo docker compose logs -f app",
+    "docker shell": "sudo docker compose exec app bash",
+    "docker pulse work": "sudo docker compose exec app php artisan pulse:work",
+    "docker pulse check": "sudo docker compose exec app php artisan pulse:check",
+    "docker outbox dispatch": "sudo docker compose exec app php artisan outbox:dispatch",
+    "docker kafka consume activity-logs": "sudo docker compose exec app php artisan kafka:consume activity-logs",
+    "docker kafka consume order-notifications": "sudo docker compose exec app php artisan kafka:consume order-notifications",
+    "docker kafka consume order-analytics": "sudo docker compose exec app php artisan kafka:consume order-analytics",
+    "docker kafka consume payments": "sudo docker compose exec app php artisan kafka:consume payments",
+    "docker everything": "sudo docker compose up -d --build && until sudo docker compose exec -T app php artisan --version >/dev/null 2>&1; do sleep 2; done && sudo docker compose exec -d app php artisan kafka:consume activity-logs && sudo docker compose exec -d app php artisan kafka:consume order-notifications && sudo docker compose exec -d app php artisan kafka:consume order-analytics && sudo docker compose exec -d app php artisan kafka:consume payments && echo 'Stack up: app :8090 | pulse :8090/pulse | kafka-ui :8082'"
 }

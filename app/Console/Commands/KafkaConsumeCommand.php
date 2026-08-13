@@ -30,7 +30,7 @@ class KafkaConsumeCommand extends Command
         }
 
         $consumer = Kafka::consumer($config['topics'], $config['group'])
-            ->withHandler($config['handler'])
+            ->withHandler(app($config['handler']))
             ->withManualCommit();
 
         if (isset($config['dlq'])) {

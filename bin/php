@@ -1,10 +1,29 @@
 #!/usr/bin/env bash
 # PHP wrapper that loads user-compiled extensions (rdkafka) without sudo.
 # Usage: bin/php artisan <command>
+#
+# Also appends the rdkafka vendored by `php artisan kafka:setup` (storage/
+# kafka/php) so the extension loads for ANY runtime user, independent of HOME.
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VENDORED_INI="$PROJECT_DIR/storage/kafka/php"
+VENDORED_LIB="$PROJECT_DIR/storage/kafka/php/lib"
+
 if [[ -z "$LD_LIBRARY_PATH" ]]; then
     export LD_LIBRARY_PATH="$HOME/.local/lib"
 else
     export LD_LIBRARY_PATH="$HOME/.local/lib:$LD_LIBRARY_PATH"
 fi
-export PHP_INI_SCAN_DIR="/etc/php.d:$HOME/.config/php"
+if [[ -d "$VENDORED_LIB" ]]; then
+    export LD_LIBRARY_PATH="$VENDORED_LIB:$LD_LIBRARY_PATH"
+fi
+
+if [[ -z "$PHP_INI_SCAN_DIR" ]]; then
+    export PHP_INI_SCAN_DIR="/etc/php.d:$HOME/.config/php"
+else
+    export PHP_INI_SCAN_DIR="/etc/php.d:$HOME/.config/php:$PHP_INI_SCAN_DIR"
+fi
+if [[ -d "$VENDORED_INI" ]]; then
+    export PHP_INI_SCAN_DIR="$PHP_INI_SCAN_DIR:$VENDORED_INI"
+fi
+
 exec /usr/bin/php "$@"

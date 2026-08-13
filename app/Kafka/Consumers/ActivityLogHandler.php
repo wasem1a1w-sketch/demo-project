@@ -18,5 +18,10 @@ class ActivityLogHandler
         $envelope = EventEnvelope::fromArray($message->getBody() ?? []);
 
         UserActivityLog::persist($envelope->data);
+
+        // Manual commit: the consumers are built with withManualCommit() (auto
+        // commit disabled), so the offset must be committed explicitly or it
+        // never advances and every worker restart redelivers duplicates.
+        $consumer->commit($message);
     }
 }
