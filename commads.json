@@ -2,8 +2,8 @@
     "run caddy": "caddy run --config Caddyfile.local --adapter caddyfile",
     "start reverb": "php artisan reverb:start",
     "pulse":"php artisan pulse:work",
-    "give user file ownership": "sudo chown -R user:user {project_path} && echo 'done'",
-    "run caddy - reverb - serve":"npx concurrently -k -c '#93c5fd,#c4b5fd,#d4d4d8' 'php artisan serve' 'php artisan reverb:start --host=127.0.0.1 --port=8081' 'caddy run --config Caddyfile.local' --names='server,reverb,caddy'",
+    "give user file ownership": "sudo nice -n 19 ionice -c3 chown -R user:user /var/www/html/myproject && echo 'done'",
+    "run caddy - reverb - serve":"npx concurrently -k -c '#93c5fd,#c4b5fd,#d4d4d8' 'php artisan serve' 'caddy run --config Caddyfile.local' --names='server,caddy'",
     "docker up": "sudo docker compose up -d --build",
     "docker kafka": "sudo docker compose up -d kafka kafka-ui",
     "docker logs": "sudo docker compose logs -f app",
@@ -15,5 +15,5 @@
     "docker kafka consume order-notifications": "sudo docker compose exec app php artisan kafka:consume order-notifications",
     "docker kafka consume order-analytics": "sudo docker compose exec app php artisan kafka:consume order-analytics",
     "docker kafka consume payments": "sudo docker compose exec app php artisan kafka:consume payments",
-    "docker everything": "sudo docker compose up -d --build && until sudo docker compose exec -T app php artisan --version >/dev/null 2>&1; do sleep 2; done && sudo docker compose exec -d app php artisan kafka:consume activity-logs && sudo docker compose exec -d app php artisan kafka:consume order-notifications && sudo docker compose exec -d app php artisan kafka:consume order-analytics && sudo docker compose exec -d app php artisan kafka:consume payments && echo 'Stack up: app :8090 | pulse :8090/pulse | kafka-ui :8082'"
+    "docker everything": "sudo docker compose up -d --build app pulse && sleep 5 && sudo docker compose up -d kafka kafka-ui && sleep 5 && until sudo docker compose exec -T app php artisan --version >/dev/null 2>&1; do sleep 2; done && sudo docker compose exec -d app php artisan kafka:consume activity-logs && sudo docker compose exec -d app php artisan kafka:consume order-notifications && sudo docker compose exec -d app php artisan kafka:consume order-analytics && sudo docker compose exec -d app php artisan kafka:consume payments && echo 'Stack up: app :8090 | pulse :8090/pulse | kafka-ui :8082'"
 }

@@ -25,12 +25,12 @@ services:
       - REVERB_APP_SECRET=myproject-secret
       - REVERB_HOST=0.0.0.0
       - REVERB_PORT=8081
-      - REVERB_SCHEME=http
+      - REVERB_SCHEME=https
       - REVERB_SERVER_HOST=reverb
       - REVERB_SERVER_PORT=8081
       - VITE_REVERB_HOST=0.0.0.0
       - VITE_REVERB_PORT=8081
-      - VITE_REVERB_SCHEME=http
+      - VITE_REVERB_SCHEME=https
       - VITE_REVERB_APP_KEY=myproject-key
       - KAFKA_BROKERS=kafka:29092
     depends_on:
@@ -67,7 +67,7 @@ services:
       - REVERB_APP_SECRET=myproject-secret
       - REVERB_HOST=0.0.0.0
       - REVERB_PORT=8081
-      - REVERB_SCHEME=http
+      - REVERB_SCHEME=https
       - REVERB_SERVER_HOST=reverb
       - REVERB_SERVER_PORT=8081
     depends_on:
